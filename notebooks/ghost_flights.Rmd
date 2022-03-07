@@ -1,0 +1,219 @@
+---
+title: "Ghost Flights -- pilot"
+author: "Aine Fairbrother-Browne"
+date: "03/22"
+output: 
+  html_document:
+    theme: paper
+    highlight: kate
+    df_print: paged
+    toc: true
+    toc_float: true
+    toc_depth: 3
+    number_sections: false  
+    fig_caption: true
+---
+
+# Introduction  
+
+* Outline environmental problem posed by ghost flights  
+* Difficulty of obtaining ghost flight data - as highlighted by the recent Guardian article/ episode of Guardian In Focus with investigative journalism  
+* Is it possible to detect ghost flights from bulk, summarised CAA data  
+* This can tell us about airline activities and allow us to scrutinise their practices without having to jump through the loopholes posed by obtaining this kind of (seemingly secret!) data  
+
+```{r setup, include=FALSE}
+
+# import libs
+library(tidyverse)
+library(DT)
+
+knitr::opts_chunk$set()
+knitr::opts_knit$set(root.dir = "~/Documents/PhD/r_projects/ghost_flights/")
+
+```
+
+# Obtain data  
+
+* I downloaded 2021 UK airline activity data from [here](https://www.caa.co.uk/data-and-analysis/uk-aviation-market/airlines/uk-airline-data/uk-airline-data-2021/)  
+* It is divided up by month, and each monthly dataset must be downloaded separately  
+* For the pilot study, I downloaded the following table: "Table 03 - All Services", using the command `wget -c https://www.caa.co.uk/Documents/Download/8634/87542ebf-3d02-44c1-8650-d8dbd6eca742/2863 -O dec_21_all_services.csv;`  
+* The inclusion criteria as per CAA for airlines and passengers contained in their data is as follows:  
+* Airlines: "Airlines with an aircraft having a Maximum Take Off Mass (MTOM) above 40 tonnes and/or an A type Operating licence or Air Transport Licence are required, under Section 84 (1) of the Civil Aviation Act 1982, to report regular monthly data. However, charter services performed by aircraft below 15 tonnes MTOM and sole use/exempt in type are not included in published tables."  
+* Passengers: "Recorded as 'uplifted passengers', they cover passengers carried by the airlines worldwide, not only to/from the UK, and relate to passengers who have paid the equivalent of 25% of the normal fare. Note that infants under 2 years are not included."  
+
+```{bash eval=F, include=F}
+
+cd /Users/ainefairbrother/Documents/PhD/r_projects/ghost_flights/data
+wget -c https://www.caa.co.uk/Documents/Download/8634/87542ebf-3d02-44c1-8650-d8dbd6eca742/2863 -O dec_21_all_services.csv;
+
+```
+
+* Read in downloaded data  
+
+```{r message=FALSE, warning=FALSE}
+
+dec21.allservices = readr::read_csv("./data/dec_21_all_services.csv")
+
+```
+
+* A quick preview of the data structure  
+
+```{r paged.print=TRUE}
+
+dec21.allservices %>% 
+  DT::datatable(., 
+                extensions = 'FixedColumns',
+                options = list(
+                  dom = 't',
+                  scrollX = TRUE,
+                  scrollCollapse = TRUE
+                ))
+
+```
+
+# Understanding the data  
+
+```{r}
+
+dec21.allservices %>% 
+  colnames()
+
+```
+
+* These bulk data summarise all of the flights run by UK airlines in a given time period  
+* Let's take a look at the columns of interest included in this data and understand them  
+* Sources: [airlinegeeks.com](https://airlinegeeks.com/2015/12/28/airline-metrics-available-seat-kilometers/), [caa.co.uk](https://www.caa.co.uk/data-and-analysis/uk-aviation-market/airlines/notes-and-faqs/)  
+
+1. `seat_km_available_x1000`  
++ available seat kilometer is a measure of passenger carrying capacity of an airline (in kilometers)  
++ it is equal to the number of seats available multiplied by the number of miles or kilometers traveled by a vehicle  
++ so the 'seat kilometer available' is a measure of the total flight passenger capacity  
++ the number is given divided by 1000 as indicated by the column name, so multiply it by 1000 to get true value  
++ `seat_km_available_x1000` = (total number of seats available for scheduled passengers)*(total number of kilometers in which those seats were flown)  
+2. `seat_km_used_x1000`  
++ using the above information about the 'seat kilometer available' metric, we can assume that: 
++ `seat_km_used_x1000` = (total number of seats used for scheduled passengers)*(total number of kilometers in which those seats were flown)  
+3. `aircraft_km_x1000`  
++ this metric will be useful for calculating the number of seats from the above values  
++ this is the total number of km that the airline covered during the period the data covers  
+
+so, seats available = (seat kilometer available)/(total km those seats were flown)  
+
+
+# Calculating raw seat numbers  
+
+* First, I will covert the `x1000` columns into raw data  
+* Then, based on the above definitions I will calculate `seat_available` and `seat_used` as follows:  
++ `seat_available = seat_km_available/aircraft_km`  
++ `seat_used = seat_km_used/aircraft_km`  
+* Then it would be useful to understand what proportion of seats were used as opposed to not, so:   
++ `percent_used = (seat_used/seat_available)*100`  
++ `percent_unused = 100-percent_used`  
+
+
+
+```{r}
+
+dec21.allservices = dec21.allservices %>% 
+  dplyr::mutate(seat_km_available = seat_km_available_x1000*1000,
+                seat_km_used = seat_km_used_x1000*1000,
+                aircraft_km = aircraft_km_x1000*1000,
+                seat_available = as.integer((seat_km_available/aircraft_km)*no_flights),
+                seat_used = as.integer((seat_km_used/aircraft_km)*no_flights),
+                percent_used_of_available = (seat_used/seat_available)*100,
+                percent_unused_of_available = 100-percent_used_of_available,
+                approximated.seat.usage.if.full.A320 = no_flights*180,
+                
+                # seat_used = seat_km_used/aircraft_km,
+                # percent_used = (seat_used/seat_available)*100,
+                # percent_unused = 100-percent_used,
+  )
+
+```
+
+This statistic shows the nine leading aircraft models in use by airlines in the UK at the end of 2020. Airbus and Boeing dominated in the UK and the two leading Airbus models, A320-200/200N and A319 made up the majority of aircraft.
+
+Model    |   Passenger capacity  
+------------------------------
+A320-200 |   180  
+A319     |   156  
+
+```{r, fig.height=5, fig.width=8, fig.cap=""}
+
+dec21.allservices %>% 
+  ggplot(data=., aes(x=approximated.seat.usage.if.full.A320, y=seat_used, label=airline_name)) + 
+  theme_bw(base_size=6) +
+  geom_point(size=0) + 
+  ylim(0,3e+06) +
+  xlim(0,3e+06) + 
+  geom_abline(intercept = 0, slope = 1) +
+  geom_label(size=2, alpha=0.7)
+
+```
+
+geom_label()# Filter data  
+
+* We will filter for only passenger services, as this is the focus of the project  
+
+```{r}
+
+dec21.allservices = dec21.allservices %>% 
+  dplyr::filter(type_of_operations=="Passenger")
+
+```
+
+# Visualising the results  
+
+* Define colour palette - let's use BA's colours, courtesy of [designpieces](https://www.designpieces.com/palette/british-airways-color-palette-hex-and-rgb/)
+
+```{r}
+
+ba.cols = c("#075aaa","#eb2226","#01295c","#efe9e5","#aca095","#b9cfed","#a7a9ac")
+
+```
+
+```{r, fig.height=5, fig.width=8, fig.cap="Barplot to show the % unused seats per airline. Data is from December 2021, and 28 UK airlines have been included. The horizontal line denotes the average % of seats"}
+
+
+p1 = dec21.allservices %>% 
+  
+  dplyr::select(airline_name, percent_used_of_available, percent_unused_of_available) %>% 
+  dplyr::mutate(plot.order = percent_unused_of_available) %>% 
+  tidyr::pivot_longer(., 2:3, names_to="seats", values_to="percent") %>% 
+  
+  ggplot(data=., aes(x=reorder(airline_name, plot.order), y=percent, fill=seats)) + 
+  theme_bw(base_size=9) +
+  geom_bar(position="stack", stat="identity") + 
+  theme(axis.text.x = element_text(angle=45, size=5, hjust=1),
+        plot.title = element_text(hjust = 0.5)
+  ) + 
+  scale_x_discrete(labels = function(x) stringr::str_wrap(x, width = 40)) + 
+  ylab("% of seats") + 
+  xlab("Airline") +
+  ylim(0,100) +
+  labs(title="% of seats unused in December for the passenger \n services of 28 UK airlines in December 2021") +
+  geom_hline(yintercept=52.84329, colour=ba.cols[6])  +
+  scale_fill_manual(values=c(ba.cols[2], ba.cols[1]), labels = c("Empty", "Not empty"))
+
+p1
+
+```
+
+# Conclusions  
+
+* The main issue with this data, is that there is no per-flight breakdown, this is an average over all of the flights in the period  
+* We cannot discern from this data the distribution of un-used seats - i.e. how many planes fly empty vs. how many fly 50% empty etc.  
+* Some (hardly any) might be passengers <2, but the majority will be on laps anyway  
+
+
+
+
+
+
+
+
+
+
+
+
+
