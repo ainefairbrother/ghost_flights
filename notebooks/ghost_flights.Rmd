@@ -16,7 +16,11 @@ output:
 
 # Introduction  
 
-* Outline environmental problem posed by ghost flights  
+What is your novel idea?
+Why should we care?
+How are you going to prove your point?
+
+* Outline environmental problem posed by ghost flights or semi-full flights  
 * Difficulty of obtaining ghost flight data - as highlighted by the recent Guardian article/ episode of Guardian In Focus with investigative journalism  
 * Is it possible to detect ghost flights from bulk, summarised CAA data  
 * This can tell us about airline activities and allow us to scrutinise their practices without having to jump through the loopholes posed by obtaining this kind of (seemingly secret!) data  
@@ -26,6 +30,7 @@ output:
 # import libs
 library(tidyverse)
 library(DT)
+library(ggforce)
 
 knitr::opts_chunk$set()
 knitr::opts_knit$set(root.dir = "~/Documents/PhD/r_projects/ghost_flights/")
@@ -71,6 +76,17 @@ dec21.allservices %>%
 
 ```
 
+# Filter data  
+
+* We will filter for only passenger services, as this is the focus of the project  
+
+```{r}
+
+dec21.allservices = dec21.allservices %>% 
+  dplyr::filter(type_of_operations=="Passenger")
+
+```
+
 # Understanding the data  
 
 ```{r}
@@ -82,83 +98,65 @@ dec21.allservices %>%
 
 * These bulk data summarise all of the flights run by UK airlines in a given time period  
 * Let's take a look at the columns of interest included in this data and understand them  
-* Sources: [airlinegeeks.com](https://airlinegeeks.com/2015/12/28/airline-metrics-available-seat-kilometers/), [caa.co.uk](https://www.caa.co.uk/data-and-analysis/uk-aviation-market/airlines/notes-and-faqs/)  
+* Sources: [airlinegeeks.com](https://airlinegeeks.com/2015/12/28/airline-metrics-available-seat-kilometers/), [caa.co.uk](https://www.caa.co.uk/data-and-analysis/uk-aviation-market/airlines/notes-and-faqs/), [ir.aeroflot.com](https://ir.aeroflot.com/fileadmin/user_upload/files/eng/glossary_eng.pdf)  
 
 1. `seat_km_available_x1000`  
-+ available seat kilometer is a measure of passenger carrying capacity of an airline (in kilometers)  
-+ it is equal to the number of seats available multiplied by the number of miles or kilometers traveled by a vehicle  
-+ so the 'seat kilometer available' is a measure of the total flight passenger capacity  
-+ the number is given divided by 1000 as indicated by the column name, so multiply it by 1000 to get true value  
++ The available seat kilometer is a measure of passenger carrying capacity of an airline (in kilometers)  
++ It is calculated by multiplying the available seats on any given aircraft by the number of kilometres flown on a given flight
++ So the 'seat kilometer available' is a measure of the total flight passenger capacity  
++ The number is given divided by 1000 as indicated by the column name, so multiply it by 1000 to get true value  
 + `seat_km_available_x1000` = (total number of seats available for scheduled passengers)*(total number of kilometers in which those seats were flown)  
 2. `seat_km_used_x1000`  
-+ using the above information about the 'seat kilometer available' metric, we can assume that: 
++ Using the above information about the 'seat kilometer available' metric, we can assume that: 
 + `seat_km_used_x1000` = (total number of seats used for scheduled passengers)*(total number of kilometers in which those seats were flown)  
-3. `aircraft_km_x1000`  
-+ this metric will be useful for calculating the number of seats from the above values  
-+ this is the total number of km that the airline covered during the period the data covers  
 
-so, seats available = (seat kilometer available)/(total km those seats were flown)  
+* These seat-kilometer values are useful, as they allow direct comparison between airlines  
+* They account for different fleet composition between airlines, for example  
 
-
-# Calculating raw seat numbers  
-
-* First, I will covert the `x1000` columns into raw data  
-* Then, based on the above definitions I will calculate `seat_available` and `seat_used` as follows:  
-+ `seat_available = seat_km_available/aircraft_km`  
-+ `seat_used = seat_km_used/aircraft_km`  
-* Then it would be useful to understand what proportion of seats were used as opposed to not, so:   
-+ `percent_used = (seat_used/seat_available)*100`  
-+ `percent_unused = 100-percent_used`  
-
-
+# Calculating useful variables  
+    
+* Then it would be useful to understand what proportion of seat-kilometers were used as opposed to not, so:  
 
 ```{r}
 
 dec21.allservices = dec21.allservices %>% 
-  dplyr::mutate(seat_km_available = seat_km_available_x1000*1000,
-                seat_km_used = seat_km_used_x1000*1000,
-                aircraft_km = aircraft_km_x1000*1000,
-                seat_available = as.integer((seat_km_available/aircraft_km)*no_flights),
-                seat_used = as.integer((seat_km_used/aircraft_km)*no_flights),
-                percent_used_of_available = (seat_used/seat_available)*100,
-                percent_unused_of_available = 100-percent_used_of_available,
-                approximated.seat.usage.if.full.A320 = no_flights*180,
-                
-                # seat_used = seat_km_used/aircraft_km,
-                # percent_used = (seat_used/seat_available)*100,
-                # percent_unused = 100-percent_used,
-  )
+  dplyr::mutate(
+    
+    # get raw values for those that are divided by 1000
+    seat_km_available = seat_km_available_x1000*1000,
+    seat_km_used = seat_km_used_x1000*1000,
+    aircraft_km = aircraft_km_x1000*1000,
+    
+    # calculate used as a % of avail, and % unused
+    seat_km_used_as_percent_of_avail = (seat_km_used/seat_km_available)*100,
+    seat_km_unused_as_percent_of_avail = 100-seat_km_used_as_percent_of_avail
+    
+  ) %>% 
+  
+  # remove redundant cols
+  dplyr::select(-contains("x1000"))
 
 ```
 
-This statistic shows the nine leading aircraft models in use by airlines in the UK at the end of 2020. Airbus and Boeing dominated in the UK and the two leading Airbus models, A320-200/200N and A319 made up the majority of aircraft.
+* Plot the `seat_km_available` against `seat_km_used` to reveal the extent to which airlines fall short of filling their available seat kilometers  
+* Sitting on the diagonal line would mean that an airline had filled all of its seats 
 
-Model    |   Passenger capacity  
-------------------------------
-A320-200 |   180  
-A319     |   156  
+```{r, fig.height=6, fig.width=9, fig.cap=""}
 
-```{r, fig.height=5, fig.width=8, fig.cap=""}
+max.seat.km.avail = dec21.allservices$seat_km_available %>% max()
 
-dec21.allservices %>% 
-  ggplot(data=., aes(x=approximated.seat.usage.if.full.A320, y=seat_used, label=airline_name)) + 
-  theme_bw(base_size=6) +
+p1 = dec21.allservices %>% 
+  dplyr::filter(no_flights>500) %>% # remove some of the smaller from plot
+  
+  ggplot(data=., aes(x=seat_km_available, y=seat_km_used, label=airline_name)) + 
+  theme_bw(base_size=12) +
   geom_point(size=0) + 
-  ylim(0,3e+06) +
-  xlim(0,3e+06) + 
   geom_abline(intercept = 0, slope = 1) +
-  geom_label(size=2, alpha=0.7)
+  geom_label(size=2, alpha=0.7, position=position_jitter()) +
+  xlim(0,max.seat.km.avail+10000) +
+  ylim(0,max.seat.km.avail+10000)
 
-```
-
-geom_label()# Filter data  
-
-* We will filter for only passenger services, as this is the focus of the project  
-
-```{r}
-
-dec21.allservices = dec21.allservices %>% 
-  dplyr::filter(type_of_operations=="Passenger")
+p1 
 
 ```
 
@@ -174,11 +172,12 @@ ba.cols = c("#075aaa","#eb2226","#01295c","#efe9e5","#aca095","#b9cfed","#a7a9ac
 
 ```{r, fig.height=5, fig.width=8, fig.cap="Barplot to show the % unused seats per airline. Data is from December 2021, and 28 UK airlines have been included. The horizontal line denotes the average % of seats"}
 
+avg.line = dec21.allservices$seat_km_unused_as_percent_of_avail %>% mean()
 
-p1 = dec21.allservices %>% 
+p2 = dec21.allservices %>% 
   
-  dplyr::select(airline_name, percent_used_of_available, percent_unused_of_available) %>% 
-  dplyr::mutate(plot.order = percent_unused_of_available) %>% 
+  dplyr::select(airline_name, seat_km_used_as_percent_of_avail, seat_km_unused_as_percent_of_avail) %>% 
+  dplyr::mutate(plot.order = seat_km_unused_as_percent_of_avail) %>% 
   tidyr::pivot_longer(., 2:3, names_to="seats", values_to="percent") %>% 
   
   ggplot(data=., aes(x=reorder(airline_name, plot.order), y=percent, fill=seats)) + 
@@ -192,12 +191,45 @@ p1 = dec21.allservices %>%
   xlab("Airline") +
   ylim(0,100) +
   labs(title="% of seats unused in December for the passenger \n services of 28 UK airlines in December 2021") +
-  geom_hline(yintercept=52.84329, colour=ba.cols[6])  +
+  geom_hline(yintercept=avg.line, colour=ba.cols[6])  +
   scale_fill_manual(values=c(ba.cols[2], ba.cols[1]), labels = c("Empty", "Not empty"))
 
-p1
+p2
 
 ```
+
+# Could any of these flights be ghost flights?  
+
+* Is it possible that any of these are empty?
+* Hard to tell because of the summary-level data  
+
+```{r, fig.height=6, fig.width=9, fig.cap=""}
+
+# https://aircraft.airbus.com/en/aircraft/a320/a320ceo#:~:text=With%20a%20versatile%20cabin%20that,relax%20and%20enjoy%20the%20flight.
+airbus.a320.max.capacity = 180
+Boeing.737800.capacity = 189
+
+dec21.allservices %>% 
+  dplyr::mutate(avg_passengers_per_flight=total_passengers_uplifted/no_flights) %>% 
+  dplyr::select(airline_name, avg_passengers_per_flight) %>% 
+  
+  ggplot(data=., aes(x=reorder(airline_name, avg_passengers_per_flight), y=avg_passengers_per_flight)) + 
+  theme_bw(base_size=9) +
+  geom_col() +
+  theme(axis.text.x = element_text(angle=45, size=5, hjust=1),
+        plot.title = element_text(hjust = 0.5)
+  ) + 
+  scale_x_discrete(labels = function(x) stringr::str_wrap(x, width = 40)) + 
+  ylab("Average passengers per flight") + 
+  xlab("Airline") +
+  labs(title="") + 
+  geom_hline(yintercept=airbus.a320.max.capacity, alpha=0.5) + 
+  geom_text(aes(0,airbus.a320.max.capacity,label = "Airbus A320 max. capacity", vjust = 1.5, hjust=-0.1), size=3) +
+  geom_hline(yintercept=Boeing.737800.capacity, alpha=0.5) + 
+  geom_text(aes(0,Boeing.737800.capacity,label = "Boeing 737-800 max. capacity", vjust = 1.5, hjust=-0.1), size=3)
+
+```
+
 
 # Conclusions  
 
