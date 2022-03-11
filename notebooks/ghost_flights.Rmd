@@ -79,11 +79,13 @@ dec21.allservices %>%
 # Filter data  
 
 * We will filter for only passenger services, as this is the focus of the project  
+* Also filter out airlines that carried 0 passengers - we will come back to these
 
 ```{r}
 
 dec21.allservices = dec21.allservices %>% 
-  dplyr::filter(type_of_operations=="Passenger")
+  dplyr::filter(type_of_operations=="Passenger") %>% 
+  dplyr::filter(total_passengers_uplifted>0)
 
 ```
 
@@ -113,9 +115,9 @@ dec21.allservices %>%
 * These seat-kilometer values are useful, as they allow direct comparison between airlines  
 * They account for different fleet composition between airlines, for example  
 
-# Calculating useful variables  
+# Calculating variables  
     
-* Then it would be useful to understand what proportion of seat-kilometers were used as opposed to not, so:  
+* It's useful to understand what proportion of seat-kilometers were used as opposed to not, so:  
 
 ```{r}
 
@@ -129,7 +131,10 @@ dec21.allservices = dec21.allservices %>%
     
     # calculate used as a % of avail, and % unused
     seat_km_used_as_percent_of_avail = (seat_km_used/seat_km_available)*100,
-    seat_km_unused_as_percent_of_avail = 100-seat_km_used_as_percent_of_avail
+    seat_km_unused_as_percent_of_avail = 100-seat_km_used_as_percent_of_avail,
+    
+    # calculate average passengers per flight
+    avg_passengers_per_flight=total_passengers_uplifted/no_flights
     
   ) %>% 
   
@@ -138,31 +143,14 @@ dec21.allservices = dec21.allservices %>%
 
 ```
 
+# Visualising the data
+
+## First, how do airlines compare?  
+
 * Plot the `seat_km_available` against `seat_km_used` to reveal the extent to which airlines fall short of filling their available seat kilometers  
-* Sitting on the diagonal line would mean that an airline had filled all of its seats 
+* Sitting on the diagonal line would mean that an airline had filled all of its seats  
 
-```{r, fig.height=6, fig.width=9, fig.cap=""}
-
-max.seat.km.avail = dec21.allservices$seat_km_available %>% max()
-
-p1 = dec21.allservices %>% 
-  dplyr::filter(no_flights>500) %>% # remove some of the smaller from plot
-  
-  ggplot(data=., aes(x=seat_km_available, y=seat_km_used, label=airline_name)) + 
-  theme_bw(base_size=12) +
-  geom_point(size=0) + 
-  geom_abline(intercept = 0, slope = 1) +
-  geom_label(size=2, alpha=0.7, position=position_jitter()) +
-  xlim(0,max.seat.km.avail+10000) +
-  ylim(0,max.seat.km.avail+10000)
-
-p1 
-
-```
-
-# Visualising the results  
-
-* Define colour palette - let's use BA's colours, courtesy of [designpieces](https://www.designpieces.com/palette/british-airways-color-palette-hex-and-rgb/)
+* Define colour palette - let's use this one, courtesy of [designpieces](https://www.designpieces.com/palette/british-airways-color-palette-hex-and-rgb/)
 
 ```{r}
 
@@ -170,66 +158,103 @@ ba.cols = c("#075aaa","#eb2226","#01295c","#efe9e5","#aca095","#b9cfed","#a7a9ac
 
 ```
 
-```{r, fig.height=5, fig.width=8, fig.cap="Barplot to show the % unused seats per airline. Data is from December 2021, and 28 UK airlines have been included. The horizontal line denotes the average % of seats"}
+```{r, fig.height=5, fig.width=9.5, fig.cap=""}
+
+library(ggrepel)
 
 avg.line = dec21.allservices$seat_km_unused_as_percent_of_avail %>% mean()
 
+p1 = dec21.allservices %>% 
+  
+  ggplot(data=., aes(x=reorder(airline_name, seat_km_unused_as_percent_of_avail), y=seat_km_unused_as_percent_of_avail)) + 
+  theme_bw(base_size=12) +
+  geom_hline(yintercept=avg.line, colour="grey", alpha=0.75)  +
+  geom_point(aes(size=total_passengers_uplifted, colour=no_flights)) +
+
+  theme(
+    legend.position=c(0.17, 0.78),
+    plot.title = element_text(hjust=0.5),
+    legend.key.size = unit(0.7,"line"),
+    legend.text = element_text(size=8),
+    legend.title = element_text(size=10),
+    legend.background = element_blank(),
+    axis.text.x = element_text(angle=55, size=5.5, hjust=1),
+    legend.direction = "vertical", 
+    legend.box = "horizontal"
+  ) + 
+  labs(color="Total no. of flights", size="Total no. of passengers", title="\nDot plot to show seat km usage (as % of avaialable) of 28 UK airlines\n") +
+  scale_x_discrete(labels = function(x) stringr::str_wrap(x, width = 40)) + 
+  scale_colour_continuous(high=ba.cols[2], low=ba.cols[1]) +
+  scale_size_continuous(breaks=c(50, 500, 5000, 50000, 500000, 1500000), labels=c("50", "500", "5000", "50000", "500000", "1500000"), guide="legend") +
+  ylim(0,100) +
+  ylab("\nSeat km unused as % of available\n") +
+  xlab("Airline")
+
+p1
+
+```
+* The average % seat km unused sits at 52%  
+* This means that on average, 52.8% of plane capacity is being left empty  
+* In terms of airlines, the plot highlights particular airlines that run the most flights (red) and carry the most passengers (large dot)  
+* So let's look at these airlines in particular, as their market share indicates that should be leading the way in terms of climate responsibility  
+* This plot clearly shows that in December 2021, EasyJet was the largest airline (in terms of passengers and flights) who vastly underutilised it's seat km capacity (48% unused)
+* EasyJet underutilises capacity more than average, and also much more than the British Airways (30.5% unused), a comparably large airline  
+* Others such as TUI, Jet2, Virgin Atalantic Airways also hold large market shares and underuse their capacity  
+
+# Could any of these flights be ghost flights?  
+
+* Is it possible that any of these are empty?  
+* Hard to tell because of the summary-level data that's available  
+* But we can have a look at the average data, and make assessments from this  
+* So let's compare average passengers per flight with the capacity of 3 aircraft that make up the majority of UK airline fleets  
+* Source: https://www.statista.com/statistics/304077/aircraft-types-in-use-in-the-uk-united-kingdom/
+* The Airbus A320, the Airbus 319 and the Boeing 737-800 are the top 3 leading models of aircraft in use in the United Kingdom (CAA data, UK, 2020), where the Airbus A320 has the most vehicles in service at 187, the Airbus A319 has 120 and the Boeing 737-800 has 103  
+* Let's look at airlines that carry these models as the largest consitituents of their fleets  
+* This will allow us to get a more accurate picture of plane capacity, and to get closer to understanding how many of these flights might be empty  
+* AER LINGUS (UK) LTD - most common = airbus.a320  
+* BA = airbus.a320  
+* EasyJet = airbus.a320
+* Jet2 = Boeing.737800
+* Ryanair = Boeing.737800
+* Wizzair = airbus.a320  
+* TUI = Boeing.737800
+
+
+
+```{r, fig.height=6, fig.width=9, fig.cap=""}
+
+# https://aircraft.airbus.com/en/aircraft/a320/a320ceo#:~:text=With%20a%20versatile%20cabin%20that,relax%20and%20enjoy%20the%20flight.
+airbus.a320.max.capacity = 180 
+Boeing.737800.max.capacity = 189
+
 p2 = dec21.allservices %>% 
+  dplyr::mutate(avg_passengers_per_flight=total_passengers_uplifted/no_flights) %>% 
+  dplyr::select(airline_name, avg_passengers_per_flight) %>% 
+  dplyr::filters(airline_name %in% c("AER LINGUS (UK) LTD", "BRITISH AIRWAYS PLC", "EASYJET UK LTD", "JET2.COM LTD", "RYANAIR UK LTD", "TUI AIRWAYS LTD", "WIZZ AIR UK LTD")) %>% 
   
-  dplyr::select(airline_name, seat_km_used_as_percent_of_avail, seat_km_unused_as_percent_of_avail) %>% 
-  dplyr::mutate(plot.order = seat_km_unused_as_percent_of_avail) %>% 
-  tidyr::pivot_longer(., 2:3, names_to="seats", values_to="percent") %>% 
-  
-  ggplot(data=., aes(x=reorder(airline_name, plot.order), y=percent, fill=seats)) + 
-  theme_bw(base_size=9) +
-  geom_bar(position="stack", stat="identity") + 
+  ggplot(data=., aes(x=reorder(airline_name, avg_passengers_per_flight), y=avg_passengers_per_flight)) + 
+  theme_bw(base_size=12) +
+  geom_col(fill=ba.cols[1]) +
   theme(axis.text.x = element_text(angle=45, size=5, hjust=1),
         plot.title = element_text(hjust = 0.5)
   ) + 
   scale_x_discrete(labels = function(x) stringr::str_wrap(x, width = 40)) + 
-  ylab("% of seats") + 
+  ylab("\nAverage no. passengers per flight\n ") + 
   xlab("Airline") +
-  ylim(0,100) +
-  labs(title="% of seats unused in December for the passenger \n services of 28 UK airlines in December 2021") +
-  geom_hline(yintercept=avg.line, colour=ba.cols[6])  +
-  scale_fill_manual(values=c(ba.cols[2], ba.cols[1]), labels = c("Empty", "Not empty"))
+  labs(title="") + 
+  geom_hline(yintercept=airbus.a320.max.capacity, alpha=0.5) +
+  geom_text(aes(x=0, y=airbus.a320.max.capacity, label = "Airbus A320 max. capacity", vjust = 1.5, hjust=-0.1), fontface="plain", size=3, check_overlap=T) +
+  geom_hline(yintercept=Boeing.737800.max.capacity, alpha=0.5) +
+  geom_text(aes(x=0, y=Boeing.737800.max.capacity, label = "Boeing 737-800 max. capacity", vjust = 1.5, hjust=-0.09), fontface="plain", size=3, check_overlap=T) +
+  # geom_hline(yintercept=airbus.a319.max.capacity, alpha=0.5) + 
+  # geom_text(aes(x=0, y=airbus.a319.max.capacity, label = "Airbus A316 max. capacity", vjust = 1.5, hjust=-0.1), fontface="plain", size=3, check_overlap=T) +
+  scale_y_continuous(breaks = seq(0, 200, by=10)) 
 
 p2
 
 ```
 
-# Could any of these flights be ghost flights?  
-
-* Is it possible that any of these are empty?
-* Hard to tell because of the summary-level data  
-
-```{r, fig.height=6, fig.width=9, fig.cap=""}
-
-# https://aircraft.airbus.com/en/aircraft/a320/a320ceo#:~:text=With%20a%20versatile%20cabin%20that,relax%20and%20enjoy%20the%20flight.
-airbus.a320.max.capacity = 180
-Boeing.737800.capacity = 189
-
-dec21.allservices %>% 
-  dplyr::mutate(avg_passengers_per_flight=total_passengers_uplifted/no_flights) %>% 
-  dplyr::select(airline_name, avg_passengers_per_flight) %>% 
-  
-  ggplot(data=., aes(x=reorder(airline_name, avg_passengers_per_flight), y=avg_passengers_per_flight)) + 
-  theme_bw(base_size=9) +
-  geom_col() +
-  theme(axis.text.x = element_text(angle=45, size=5, hjust=1),
-        plot.title = element_text(hjust = 0.5)
-  ) + 
-  scale_x_discrete(labels = function(x) stringr::str_wrap(x, width = 40)) + 
-  ylab("Average passengers per flight") + 
-  xlab("Airline") +
-  labs(title="") + 
-  geom_hline(yintercept=airbus.a320.max.capacity, alpha=0.5) + 
-  geom_text(aes(0,airbus.a320.max.capacity,label = "Airbus A320 max. capacity", vjust = 1.5, hjust=-0.1), size=3) +
-  geom_hline(yintercept=Boeing.737800.capacity, alpha=0.5) + 
-  geom_text(aes(0,Boeing.737800.capacity,label = "Boeing 737-800 max. capacity", vjust = 1.5, hjust=-0.1), size=3)
-
-```
-
+* Here it is likely that the airlines with the very lowest passengers per flight operate charter or private services, and as such do not carry these 
 
 # Conclusions  
 
@@ -246,6 +271,35 @@ dec21.allservices %>%
 
 
 
+
+
+```{r, fig.height=5, fig.width=8, fig.cap=""}
+
+# avg.line = dec21.allservices$seat_km_unused_as_percent_of_avail %>% mean()
+# 
+# p2 = dec21.allservices %>% 
+#   
+#   dplyr::select(airline_name, seat_km_used_as_percent_of_avail, seat_km_unused_as_percent_of_avail) %>% 
+#   dplyr::mutate(plot.order = seat_km_unused_as_percent_of_avail) %>% 
+#   tidyr::pivot_longer(., 2:3, names_to="seats", values_to="percent") %>% 
+#   
+#   ggplot(data=., aes(x=reorder(airline_name, plot.order), y=percent, fill=seats)) + 
+#   theme_bw(base_size=9) +
+#   geom_bar(position="stack", stat="identity") + 
+#   theme(axis.text.x = element_text(angle=45, size=5, hjust=1),
+#         plot.title = element_text(hjust = 0.5)
+#   ) + 
+#   scale_x_discrete(labels = function(x) stringr::str_wrap(x, width = 40)) + 
+#   ylab("%") + 
+#   xlab("Airline") +
+#   ylim(0,100) +
+#   labs(title="\nBarplot to show the % unused seats per airline for 28 UK airlines.\n The horizontal line denotes the average seat km unused\n", fill="Seat km") +
+#   geom_hline(yintercept=avg.line, colour=ba.cols[6])  +
+#   scale_fill_manual(values=c(ba.cols[2], ba.cols[1]), labels = c("Not used", "Used"))
+# 
+# p2
+
+```
 
 
 
