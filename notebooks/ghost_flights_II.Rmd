@@ -133,7 +133,6 @@ caa.dat = caa.dat %>%
   ) %>% 
   dplyr::relocate(rundate, reporting_period, reporting_month, reporting_year, reporting_month_year)
 
-
 ```
 
 # Filter data  
@@ -292,7 +291,7 @@ data.to.plot %>%
   xlab("\nReporting period") +
   
   # shade 0% capacity rule area
-  annotate("rect", xmin = as.Date("2020-04-01"), xmax = as.Date("2021-11-01"), ymin = -Inf, ymax = Inf, alpha = 0.15)
+  annotate("rect", xmin = as.Date("2020-04-01"), xmax = as.Date("2021-11-01"), ymin = -Inf, ymax = Inf, alpha = 0.15) 
 
 ```
 
@@ -312,6 +311,13 @@ data.to.plot %>%
 * This is particularly apparent during January - July of 2021, which was a lockdown in the UK  
 * There are a number of conclusions that can be drawn from this, of course hampered by the fact that this is total/ average data rather than per-flight data  
 * The first is that, on average, during the 0% flights were being run at  
+
+
+
+
+
+
+
 
 
 seat_km_available*seat_km_used_as_percent_of_available / aircraft_km
@@ -339,18 +345,6 @@ data.to.plot %>%
 
 ```
 
-
-
-
-
-
-
-
-
-
-
-
-
 ```{r, fig.width=5, fig.height=2}
 
 data.to.plot %>% 
@@ -369,9 +363,6 @@ data.to.plot %>%
   geom_vline(xintercept=nov.21, linetype=2, alpha=0.5)
 
 ```
-
-
-
 
 ```{r, fig.width=5, fig.height=2}
 
@@ -429,7 +420,6 @@ data.to.plot %>%
   geom_vline(xintercept=nov.21, linetype=2, alpha=0.5)
 
 ```
-
 
 ```{r, fig.width=5, fig.height=2}
 
