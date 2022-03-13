@@ -1,0 +1,464 @@
+---
+title: "Ghost Flights -- pilot"
+author: "Aine Fairbrother-Browne"
+date: "03/22"
+output: 
+  html_document:
+    theme: paper
+    highlight: kate
+    df_print: paged
+    toc: true
+    toc_float: true
+    toc_depth: 3
+    number_sections: false  
+    fig_caption: true
+---
+
+Title(s):
+Understanding airline efficiency using publicly available data
+
+What is your novel idea? - public data to hold aviation industry to account
+Why should we care? - climate change
+How are you going to prove your point? - data analysis of CAA public data
+
+Introduction:
+I was listening to The Guardian’s Today In Focus podcast recently, and was captivated by the episode ‘The Scandal of Britain’s Ghost Flights’ [1]. Ghost flights are empty or near-empty flights (0-10% capacity) undertaken by airlines simply to reach the flight quota required to retain their airport ‘slots’. Damian Carrington uncovers that despite the ‘slot’ rules being lifted due to the pandemic causing passenger numbers to crash, airlines continued to run ‘ghost flights’. 
+
+Aviation is an extremely polluting industry, generating 250kg CO2 per hour of flying [2]. To put that into perspective, even a short-haul flight can generate more CO2 than people from some countries produce in a year. For example, someone from Sub-Saharan Africa releases ~100kg CO2 per year [3]. 
+
+We need to drastically and immediately make changes in order to keep global heating below 1.5C (2.7F). There is a lot that will be challenging to change, requiring major shifts in economic and political systems. But the issue of low efficiency in the aviation industry, ghost flights in particular, seems like an easy one to fix, the low hanging fruit of CO2 emission reduction if you like. 
+
+Some approximate numbers of ghost flights have been gleaned from hard-won datasets (as discussed in the Guardian podcast [1]) but obtaining these data is difficult. Carrington was forced to recruit help from an MP in order to obtain the per-flight data that he needed to understand ghost flight numbers.
+
+In the podcast, the core findings that Carrington outlines are as follows: 
+- “According to newly revealed official figures, almost 15,000 ghost flights have departed from UK airports in March 2020 and September 2021.”
+- “some of these flights are a result of the long-established system forcing airlines to maintain flights in their airport ‘slots’ or risk losing their position to rivals” 
+- “But this doesn’t explain those flights in the pandemic period when the slot system was paused.”
+And so the question remains… why did airlines continue to fly heavily polluting empty flights?
+- He was limited by access to outgoing UK flight data
+
+Inspired by this work, I want to ask whether it is possible to glean some useful insights about airline efficiency from publicly available airline data, without having to go through FOIs and leveraging high-profile contacts. The idea is that if they are, this represents an accessible way to make these issues known, and hold airlines, airports and regulators accountable to these practices. This data is released monthly by the CAA, and so capacity figures are trackable over time and can be monitored in response to regulation changes. 
+
+Questions: 
+- Are the trends observed by Carrington observable in the publicly available UK Civil Aviation Authority (CAA) data?
+- Is there anything else that can be observed?
+    - Particularly bad airlines?
+
+References
+1. https://www.theguardian.com/news/audio/2022/mar/07/the-scandal-of-britains-ghost-flights-podcast?CMP=Share_iOSApp_Other
+2.  https://www.carbonindependent.org/sources_aviation.html#:~:text=A%20reasonable%20estimate%20for%20aviation,obtained%20by%20basis%201%20above
+3. https://ourworldindata.org/annual-co2-emissions
+
+
+```{r setup, include=FALSE}
+
+# import libs
+library(tidyverse)
+library(DT)
+library(ggforce)
+library(scales)
+library(lubridate)
+
+knitr::opts_chunk$set()
+knitr::opts_knit$set(root.dir = "~/Documents/PhD/r_projects/ghost_flights/")
+
+```
+
+# Obtain data  
+
+* I downloaded UK airline activity data from [here](https://www.caa.co.uk/data-and-analysis/uk-aviation-market/airlines/uk-airline-data/)  
+* It is divided up by month, and each monthly dataset must be downloaded separately  
+* For each month, I downloaded the following table: "Table 03 - All Services", using the command `wget -c https://www.caa.co.uk/Documents/Download/8634/87542ebf-3d02-44c1-8650-d8dbd6eca742/2863 -O dec_21_all_services.csv;`, for example    
+* The inclusion criteria as per CAA for airlines and passengers contained in their data is as follows:  
+* Airlines: "Airlines with an aircraft having a Maximum Take Off Mass (MTOM) above 40 tonnes and/or an A type Operating licence or Air Transport Licence are required, under Section 84 (1) of the Civil Aviation Act 1982, to report regular monthly data. However, charter services performed by aircraft below 15 tonnes MTOM and sole use/exempt in type are not included in published tables."  
+* Passengers: "Recorded as 'uplifted passengers', they cover passengers carried by the airlines worldwide, not only to/from the UK, and relate to passengers who have paid the equivalent of 25% of the normal fare. Note that infants under 2 years are not included."  
+
+```{bash eval=F, include=F}
+
+cd /Users/ainefairbrother/Documents/PhD/r_projects/ghost_flights/data
+
+# 2019 pre pandemic, non christmas - 80%
+wget -c https://www.caa.co.uk/Documents/Download/4032/36ea4cce-bc59-4e62-9aad-32bfcc0e0a9e/1809 -O nov_2019_all_services.csv
+wget -c https://www.caa.co.uk/Documents/Download/4023/fe48c60b-e232-4390-b9de-a51ab6d29c8f/1716 -O dec_2019_all_services.csv
+# 2020
+wget -c https://www.caa.co.uk/Documents/Download/4161/064d174e-57fe-45b0-8e4b-7cfc56c608bf/1916 -O jan_2020_all_services.csv
+wget -c https://www.caa.co.uk/Documents/Download/4159/d65c2023-d89c-4e79-be68-c09b27642dc4/1903 -O feb_2020_all_services.csv
+wget -c https://www.caa.co.uk/Documents/Download/4152/0a3528d3-1299-4936-abd2-804e650af367/1957 -O mar_2020_all_services.csv
+wget -c https://www.caa.co.uk/Documents/Download/4143/38f65663-dc9e-4c1a-b66e-df2e54e9151c/1862 -O apr_2020_all_services.csv
+# summer 2020 - 0%
+wget -c https://www.caa.co.uk/Documents/Download/4141/4b593b14-5e4b-4ebd-b0be-4d7006ea8d58/1968 -O may_2020_all_services.csv
+wget -c https://www.caa.co.uk/Documents/Download/4132/5da78166-10f1-4f3a-ae56-408d8e2f5ff1/1944 -O jun_2020_all_services.csv
+wget -c https://www.caa.co.uk/Documents/Download/4128/26d80e8a-1719-4c7c-9a24-4b16a848c0b4/1929 -O jul_2020_all_services.csv
+wget -c https://www.caa.co.uk/Documents/Download/4127/62f55b7b-32a8-4f63-8004-b46f3cad3927/2891 -O aug_2020_all_services.csv
+wget -c https://www.caa.co.uk/Documents/Download/4126/b43e6670-33a9-44f5-a604-032b361a55df/2010 -O sep_2020_all_services.csv
+wget -c https://www.caa.co.uk/Documents/Download/4125/ec86e1dd-f1d2-4ac0-951d-b08dcc5aca90/1996 -O oct_2020_all_services.csv
+wget -c https://www.caa.co.uk/Documents/Download/4124/83c23520-07f9-43af-a99c-63ada4f73d17/1983 -O nov_2020_all_services.csv
+wget -c https://www.caa.co.uk/Documents/Download/4091/34c32772-3a2a-4447-84e9-d4eef041ec2e/1890 -O dec_2020_all_services.csv
+# 2021
+wget -c https://www.caa.co.uk/Documents/Download/4194/04952113-6bc8-4d59-a2d1-c22138dd3a49/2049 -O jan_2021_all_services.csv
+wget -c https://www.caa.co.uk/Documents/Download/4192/0435c01a-3064-4ce4-9e1d-86949f5d0286/2036 -O feb_2021_all_services.csv
+wget -c https://www.caa.co.uk/Documents/Download/4191/f60e8ed0-ae6f-49a5-8e36-9df5d84fa314/2090 -O mar_2021_all_services.csv
+wget -c https://www.caa.co.uk/Documents/Download/4190/31572161-42a1-4d5f-9c8a-2dc100f2227d/2023 -O apr_2021_all_services.csv
+wget -c https://www.caa.co.uk/Documents/Download/4189/bc809c54-0164-4863-bd13-9c9acfeda975/2103 -O may_2021_all_services.csv
+wget -c https://www.caa.co.uk/Documents/Download/4169/52e37af5-22d5-4489-94f3-af11cc7e3f5b/2076 -O jun_2021_all_services.csv
+wget -c https://www.caa.co.uk/Documents/Download/3924/087de34d-6d50-45fb-933c-836af966a0b3/2062 -O jul_2021_all_services.csv
+wget -c https://www.caa.co.uk/Documents/Download/8389/766c7b54-84b9-40bc-b212-281cab5268d3/2688 -O aug_2021_all_services.csv
+wget -c https://www.caa.co.uk/Documents/Download/8390/3de520e0-b11c-4dae-a2b1-9f9c7c90735f/2728 -O sep_2021_all_services.csv
+wget -c https://www.caa.co.uk/Documents/Download/8391/90979cf6-8574-470a-8859-60727cf31602/2808 -O oct_2021_all_services.csv
+# winter 2022 - 50% 
+wget -c https://www.caa.co.uk/Documents/Download/8392/3105042e-778d-4833-b990-d794213b6bc6/2779 -O nov_2021_all_services.csv
+wget -c https://www.caa.co.uk/Documents/Download/8634/87542ebf-3d02-44c1-8650-d8dbd6eca742/2863 -O dec_2021_all_services.csv
+wget -c https://www.caa.co.uk/Documents/Download/9085/957ac730-2947-4be0-b029-3191e6fb2a3e/2935 -O jan_2022_all_services.csv
+
+```
+
+* Read in downloaded data  
+
+```{r message=FALSE, warning=FALSE}
+
+setwd("/Users/ainefairbrother/Documents/PhD/r_projects/ghost_flights/data/")
+caa.dat = plyr::ldply(list.files(path="/Users/ainefairbrother/Documents/PhD/r_projects/ghost_flights/data/", pattern="*.csv"), read_csv)
+
+```
+
+* Do some `lubridate` magic to give `reporting_month`, `reporting_year` and `reporting_month_year` columns - this will make plotting easier  
+
+```{r}
+
+caa.dat = caa.dat %>% 
+  dplyr::mutate(reporting_month=month(ym(reporting_period), label=T), 
+                reporting_year=year(ym(reporting_period)),
+                reporting_month_year=paste0(reporting_month,"-",reporting_year),
+                reporting_period=ym(reporting_period)
+  ) %>% 
+  dplyr::relocate(rundate, reporting_period, reporting_month, reporting_year, reporting_month_year)
+
+
+```
+
+# Filter data  
+
+* We will filter for only passenger services, as this is the focus of the project  
+* Also filter out airlines that carried 0 passengers - we will come back to these
+
+```{r}
+
+caa.dat = caa.dat %>% 
+  dplyr::filter(type_of_operations=="Passenger")
+
+```
+
+# Calculating variables  
+
+I calculated the following variables:  
+* Seat kilometers used as percent of available  
+* Seat kilometers unused as percent of available  
+* Average passengers per flight  
+
+```{r}
+
+caa.dat = caa.dat %>% 
+  dplyr::mutate(
+    
+    # get raw values for those that are divided by 1000
+    seat_km_available = seat_km_available_x1000*1000,
+    seat_km_used = seat_km_used_x1000*1000,
+    aircraft_km = aircraft_km_x1000*1000,
+    
+    # calculate used as a % of avail, and % unused
+    seat_km_used_as_percent_of_avail = (seat_km_used/seat_km_available)*100,
+    seat_km_unused_as_percent_of_avail = 100-seat_km_used_as_percent_of_avail,
+    
+    # calculate average passengers per flight
+    avg_passengers_per_flight=total_passengers_uplifted/no_flights,
+    
+    # # calculate numbers of actual seats empty and full
+    # actual_empty_seats = round((seat_km_used/aircraft_km), 0), 
+    # actual_full_seats = round((seat_km_available/aircraft_km), 0), 
+    # percent_full_seat_of_avail = (actual_empty_seats/(actual_empty_seats+actual_full_seats))*100
+    
+  ) %>% 
+  
+  # remove redundant cols
+  dplyr::select(-contains("x1000"))
+
+```
+
+# Are the trends observed by Carrington observable in the publicly available UK Civil Aviation Authority (CAA) data?  
+
+```{r}
+
+caa.dat %>% 
+  dplyr::pull(airline_name) %>% 
+  unique() %>% 
+  length() # 32 airlines 
+
+```
+
+* Define slot rule variables to add lines on plots  
+
+* When were the slot rules in place? use it or loose it - https://www.routesonline.com/news/29/breaking-news/297416/uk-increases-minimum-slot-usage-threshold-for-summer-2022/  
+* IATA Summer schedule - begins on the last Sunday of March and ends on the last Saturday of October.  
+* IATA Winter schedule - begins on the last Sunday of October and ends on the last Saturday of March.  
+* pre pandemic = 80%  
+* However, in response to the pandemic, the European Commission waived the “use it or lose it” rule for the summer 2020 and winter 2020/21 seasons.  
+* Following the end of the Brexit transition period—during which time the UK was following Brussels’ rules on slots—the UK chose to extend the waiver to cover the summer 2021 season and then introduced a 50% threshold for the winter 2021/22 season in decisions that mirrored those taken by the EC.  
+
+* Nov 2019 - March 2020 = 80%  
+* April 2020 - Oct 2020 = 0%  
+* Nov 2020 - March 2021 = 0%  
+* April 2021 - Oct 2021 = 0%  
+* Nov 2021 - March 2022 = 50%  
+
+* Filter data for plotting  
+
+* Define slot rule time boundaries  
+
+```{r}
+
+apr.20 = caa.dat %>% dplyr::pull(reporting_period) %>% unique() %>% .[.=="2020-04-01"] %>% as.numeric(.)
+nov.20 = caa.dat %>% dplyr::pull(reporting_period) %>% unique() %>% .[.=="2020-11-01"] %>% as.numeric(.)
+nov.21 = caa.dat %>% dplyr::pull(reporting_period) %>% unique() %>% .[.=="2021-11-01"] %>% as.numeric(.)
+
+```
+
+* Define data to plot  
+* Focusing on the largest 5 airlines by passenger capacity
+* Calculate airlines 
+
+```{r}
+
+top.5.big.airlines = caa.dat %>% 
+  # filter for airlines with data in every month
+  dplyr::group_by(airline_name) %>%
+  # allow 20% missing data, filter out airlines with more than this
+  dplyr::filter(n() > as.numeric(caa.dat$reporting_month_year %>% unique() %>% length())-5 ) %>%  
+  # to get the top 5 airlines by avg seat_km_available
+  dplyr::summarise(mean_seat_km_available = mean(seat_km_available)) %>% 
+  dplyr::arrange(-mean_seat_km_available) %>% 
+  dplyr::pull(airline_name) %>% unique() %>% .[1:5] 
+
+data.to.plot = caa.dat %>% 
+  dplyr::filter(airline_name %in% top.5.big.airlines)
+
+```
+
+* Define colour palette  
+
+```{r}
+
+library(RColorBrewer)
+# Define the number of colors you want
+nb.cols = data.to.plot %>%  
+  dplyr::pull(airline_name) %>% 
+  unique() %>% 
+  length() %>%
+  as.numeric()
+
+mycolors = colorRampPalette(brewer.pal(nb.cols, "Set1"))(nb.cols)
+
+```
+
+
+```{r, fig.width=5, fig.height=2}
+
+data.to.plot %>% 
+  ggplot(data=., aes(x=reporting_period, y=seat_km_available, colour=airline_name)) +
+  theme_bw() +
+  geom_line(alpha=0.6) +
+  geom_point(aes(size=seat_km_used_as_percent_of_avail, alpha=seat_km_used_as_percent_of_avail)) +
+  # geom_vline(xintercept=apr.20, linetype=2, alpha=0.5) +
+  # geom_vline(xintercept=nov.21, linetype=2, alpha=0.5) + 
+  theme(legend.position =  "right", # legend.position=c(0.1, 0.7),
+        legend.background = element_blank(),
+        legend.box.background = element_blank(),
+        # legend.key.size = unit(0.1, "lines"),
+        legend.text = element_text(size=8),
+        legend.title = element_text(size=8),
+        legend.direction = "vertical", 
+        legend.box = "vertical",
+        # legend.spacing.y = unit(0.1, 'cm'),
+        # legend.box.spacing = unit(0.1, "cm"),
+        # legend.margin = margin(0.1, 0.1),
+        axis.text.x = element_text(angle=55, hjust=1)) +
+  labs(colour="Airline", size="Seat km used as % of available", alpha="") +
+  guides(colour = guide_legend(order = 1), size=guide_legend(order = 3)) +
+  scale_colour_manual(values = mycolors) +
+  scale_alpha(guide="none") +
+  scale_x_date(breaks=scales::date_breaks("1 month")) +
+  
+  # ylim(0,100) + 
+  ylab("\nSeat km available\n") +
+  xlab("\nReporting period") +
+  
+  # shade 0% capacity rule area
+  annotate("rect", xmin = as.Date("2020-04-01"), xmax = as.Date("2021-11-01"), ymin = -Inf, ymax = Inf, alpha = 0.15)
+
+```
+
+* Seat km available is a measure of the number of seats and the distances those seats could fly as determined by scheduled flights and aircraft capacity  
+* So if an airline has 1 Boeing 737-800 (capacity 189) and has 1 scheduled flight from London to Edinburgh (approx. 500km), then it will have an available seat km of 189*500=94500  
+* This makes seat km available a good inter-airline comparison metric, as it takes into account the variable fleets of airlines, as well as the variable haulages of different airlines  
+* Each month, the CAA releases its UK Airline dataset, which includes monthly totals for passengers uplifted, distance flown, seat kilometers available, seat kilometers used etc., for each airline  
+* This plot shows a timecourse spanning from November 2019 (pre-pandemic) to January 2022 (latest figures released by the CAA), with dates plotted along the x-axis corresponding to the monthly data-release schedule of the CAA  
+* The y-axis gives the % of seat kilometers used of those available to the airline  
+* The shaded area represents the duration of the UK waiver on the minimum slot rule, i.e. there was no minimum activity required by an airline during this time to retain their airport slot  
+* In the pre-pandemic months of November and December of 2019, airlines were required to be active 80% of the time to retain their airport slots  
+* This is visible in the data for these airlines - seat km availability is high, showing that these airlines are scheduling many flights and % seat km used is high too, indicative of good efficiency 
+* As March rolls around, and the UK becomes aware of COVID-19, % seat km used begings to drop off  
+* By April 2020, the actual capacity of the airline plummets as the 80% rule is waived. Now that airlines can retain slots without operating at min. 80%, it is likely airlines are reduing their capacity by putting staff on furlough and scheduling far fewer flights  
+* Demand from customers plummets too, as March sees the onset of the first UK lockdown  
+* And yet what we do see is not that a few essential flights are occuring, but that % seat km used (a measure of the fullness of the flights/usage of the flights), indicated by size and opacity of the points, suggests that flights are still going ahead, but at much lower capacities.  
+* This is particularly apparent during January - July of 2021, which was a lockdown in the UK  
+* There are a number of conclusions that can be drawn from this, of course hampered by the fact that this is total/ average data rather than per-flight data  
+* The first is that, on average, during the 0% flights were being run at  
+
+
+seat_km_available*seat_km_used_as_percent_of_available / aircraft_km
+
+```{r}
+
+data.to.plot %>%
+  
+  dplyr::filter( !(reporting_year %in% c("2020","2021")) ) %>% 
+  
+  
+  ggplot(data=., aes(x=reorder(airline_name, actual_empty_seats), y=actual_empty_seats)) +
+  theme_bw() +
+  geom_col() +
+  theme(axis.text.x = element_text(angle=45, size=5, hjust=1),
+        plot.title = element_text(hjust = 0.5)
+  ) +
+  scale_x_discrete(labels = function(x) stringr::str_wrap(x, width = 40)) +
+  ylab("actual_empty_seats") +
+  xlab("Airline") +
+  labs(title="", fill="") +
+  facet_grid(~reporting_month_year)
+
+
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+```{r, fig.width=5, fig.height=2}
+
+data.to.plot %>% 
+  ggplot(data=., aes(x=reporting_period, y=total_passengers_uplifted, colour=airline_name)) +
+  theme_bw() +
+  geom_line(alpha=0.5) +
+  geom_point(aes(size=no_flights), alpha=0.7) +
+  scale_x_date(breaks=scales::date_breaks("1 month")) +
+  theme(legend.position = "top", 
+        legend.key.size = unit(0.5, "lines"),
+        legend.text = element_text(size=6),
+        axis.text.x = element_text(angle=55, hjust=1)) +
+  labs(colour="") +
+  scale_colour_manual(values = mycolors) +
+  geom_vline(xintercept=apr.20, linetype=2, alpha=0.5) +
+  geom_vline(xintercept=nov.21, linetype=2, alpha=0.5)
+
+```
+
+
+
+
+```{r, fig.width=5, fig.height=2}
+
+data.to.plot %>% 
+  ggplot(data=., aes(x=reporting_period, y=no_flights, colour=airline_name)) +
+  theme_bw() +
+  geom_line(alpha=0.4) +
+  geom_point() +
+  scale_x_date(breaks=scales::date_breaks("1 month")) +
+  theme(legend.position = "top", 
+        legend.key.size = unit(0.5, "lines"),
+        legend.text = element_text(size=6),
+        axis.text.x = element_text(angle=55, hjust=1)) +
+  labs(colour="") +
+  scale_colour_manual(values = mycolors) +
+  geom_vline(xintercept=apr.20, linetype=2, alpha=0.5) +
+  geom_vline(xintercept=nov.21, linetype=2, alpha=0.5)
+
+```
+
+```{r, fig.width=5, fig.height=2}
+
+data.to.plot %>% 
+  ggplot(data=., aes(x=reporting_period, y=avg_passengers_per_flight, colour=airline_name)) +
+  theme_bw() +
+  geom_line(alpha=0.4) +
+  geom_point() +
+  scale_x_date(breaks=scales::date_breaks("1 month")) +
+  theme(legend.position = "top", 
+        legend.key.size = unit(0.5, "lines"),
+        legend.text = element_text(size=6),
+        axis.text.x = element_text(angle=55, hjust=1)) +
+  labs(colour="") +
+  scale_colour_manual(values = mycolors) +
+  geom_vline(xintercept=apr.20, linetype=2, alpha=0.5) +
+  geom_vline(xintercept=nov.21, linetype=2, alpha=0.5)
+
+```
+
+```{r, fig.width=5, fig.height=2}
+
+data.to.plot %>% 
+  ggplot(data=., aes(x=reporting_period, y=aircraft_km, colour=airline_name)) +
+  theme_bw() +
+  geom_line(alpha=0.4) +
+  geom_point() +
+  scale_x_date(breaks=scales::date_breaks("1 month")) +
+  theme(legend.position = "top", 
+        legend.key.size = unit(0.5, "lines"),
+        legend.text = element_text(size=6),
+        axis.text.x = element_text(angle=55, hjust=1)) +
+  labs(colour="") + 
+  scale_colour_manual(values = mycolors) +
+  geom_vline(xintercept=apr.20, linetype=2, alpha=0.5) +
+  geom_vline(xintercept=nov.21, linetype=2, alpha=0.5)
+
+```
+
+
+```{r, fig.width=5, fig.height=2}
+
+data.to.plot %>% 
+  ggplot(data=., aes(x=reporting_period, y=seat_km_used_as_percent_of_avail, group=reporting_period)) +
+  theme_bw() +
+  geom_boxplot() +
+  scale_x_date(breaks=scales::date_breaks("1 month")) +
+  theme(legend.position = "top", 
+        legend.key.size = unit(0.5, "lines"),
+        legend.text = element_text(size=6),
+        axis.text.x = element_text(angle=55, hjust=1)) +
+  labs(colour="") +
+  scale_colour_manual(values = mycolors) +
+  geom_vline(xintercept=apr.20, linetype=2, alpha=0.5) +
+  geom_vline(xintercept=nov.21, linetype=2, alpha=0.5) +
+  ylim(0,100)
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+

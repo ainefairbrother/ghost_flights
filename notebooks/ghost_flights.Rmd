@@ -23,7 +23,16 @@ How are you going to prove your point?
 * Outline environmental problem posed by ghost flights or semi-full flights  
 * Difficulty of obtaining ghost flight data - as highlighted by the recent Guardian article/ episode of Guardian In Focus with investigative journalism  
 * Is it possible to detect ghost flights from bulk, summarised CAA data  
-* This can tell us about airline activities and allow us to scrutinise their practices without having to jump through the loopholes posed by obtaining this kind of (seemingly secret!) data  
+* This can tell us about airline activities and allow us to scrutinise their practices without having to jump through the loopholes posed by obtaining this kind of data  
+
+3 scenarios: 
+
+* When were the slot rules in place? use it or loose it - https://www.routesonline.com/news/29/breaking-news/297416/uk-increases-minimum-slot-usage-threshold-for-summer-2022/  
+* pre pandemic = 80%  
+* summer 2020 - summer 2021 = 0%  
+* winter 2021/22 = 50%
+* March 27/03/22 = 70%
+
 
 ```{r setup, include=FALSE}
 
@@ -49,7 +58,19 @@ knitr::opts_knit$set(root.dir = "~/Documents/PhD/r_projects/ghost_flights/")
 ```{bash eval=F, include=F}
 
 cd /Users/ainefairbrother/Documents/PhD/r_projects/ghost_flights/data
+
+# pre pandemic, non christmas - 80%
+wget -c https://www.caa.co.uk/Documents/Download/4032/36ea4cce-bc59-4e62-9aad-32bfcc0e0a9e/1809 -O nov_19_all_services.csv;
+
+# summer 2020 - 0%
+wget -c https://www.caa.co.uk/Documents/Download/4128/26d80e8a-1719-4c7c-9a24-4b16a848c0b4/1929 -O jul_20_all_services.csv;
+
+# winter 2022 - 50% 
+wget -c https://www.caa.co.uk/Documents/Download/9085/957ac730-2947-4be0-b029-3191e6fb2a3e/2935 -O jan_22_all_services.csv;
+
+
 wget -c https://www.caa.co.uk/Documents/Download/8634/87542ebf-3d02-44c1-8650-d8dbd6eca742/2863 -O dec_21_all_services.csv;
+wget -c https://www.caa.co.uk/Documents/Download/4023/fe48c60b-e232-4390-b9de-a51ab6d29c8f/1716 -O dec_19_all_services.csv;
 
 ```
 
@@ -57,7 +78,7 @@ wget -c https://www.caa.co.uk/Documents/Download/8634/87542ebf-3d02-44c1-8650-d8
 
 ```{r message=FALSE, warning=FALSE}
 
-dec21.allservices = readr::read_csv("./data/dec_21_all_services.csv")
+dec21.allservices = readr::read_csv("./data/jan_22_all_services.csv")
 
 ```
 
@@ -158,9 +179,7 @@ ba.cols = c("#075aaa","#eb2226","#01295c","#efe9e5","#aca095","#b9cfed","#a7a9ac
 
 ```
 
-```{r, fig.height=5, fig.width=9.5, fig.cap=""}
-
-library(ggrepel)
+```{r, fig.height=3.5, fig.width=5, fig.cap=""}
 
 avg.line = dec21.allservices$seat_km_unused_as_percent_of_avail %>% mean()
 
@@ -174,21 +193,21 @@ p1 = dec21.allservices %>%
   theme(
     legend.position=c(0.17, 0.78),
     plot.title = element_text(hjust=0.5),
-    legend.key.size = unit(0.7,"line"),
-    legend.text = element_text(size=8),
-    legend.title = element_text(size=10),
+    legend.key.size = unit(0.8,"line"),
+    # legend.text = element_text(size=12),
+    # legend.title = element_text(size=12),
     legend.background = element_blank(),
-    axis.text.x = element_text(angle=55, size=5.5, hjust=1),
+    axis.text.x = element_text(angle=55, size=8, hjust=1),
     legend.direction = "vertical", 
     legend.box = "horizontal"
   ) + 
   labs(color="Total no. of flights", size="Total no. of passengers", title="\nDot plot to show seat km usage (as % of avaialable) of 28 UK airlines\n") +
   scale_x_discrete(labels = function(x) stringr::str_wrap(x, width = 40)) + 
-  scale_colour_continuous(high=ba.cols[2], low=ba.cols[1]) +
+  scale_colour_gradient(high=ba.cols[2], low=ba.cols[1], guide = "colourbar") +
   scale_size_continuous(breaks=c(50, 500, 5000, 50000, 500000, 1500000), labels=c("50", "500", "5000", "50000", "500000", "1500000"), guide="legend") +
-  ylim(0,100) +
   ylab("\nSeat km unused as % of available\n") +
-  xlab("Airline")
+  xlab("Airline") + 
+  scale_y_continuous(breaks = seq(0, 100, by=10), limits=c(0,100)) 
 
 p1
 
@@ -209,19 +228,23 @@ p1
 * So let's compare average passengers per flight with the capacity of 3 aircraft that make up the majority of UK airline fleets  
 * Source: https://www.statista.com/statistics/304077/aircraft-types-in-use-in-the-uk-united-kingdom/
 * The Airbus A320, the Airbus 319 and the Boeing 737-800 are the top 3 leading models of aircraft in use in the United Kingdom (CAA data, UK, 2020), where the Airbus A320 has the most vehicles in service at 187, the Airbus A319 has 120 and the Boeing 737-800 has 103  
-* Let's look at airlines that carry these models as the largest consitituents of their fleets  
-* This will allow us to get a more accurate picture of plane capacity, and to get closer to understanding how many of these flights might be empty  
-* AER LINGUS (UK) LTD - most common = airbus.a320  
-* BA = airbus.a320  
-* EasyJet = airbus.a320
-* Jet2 = Boeing.737800
-* Ryanair = Boeing.737800
-* Wizzair = airbus.a320  
-* TUI = Boeing.737800
+* Let's look at airlines for which these models are the largest constituents of their fleets  
 
+I obtained the following information from the respective airline websites:  
 
+| Airline             | Most common plane model in fleet |
+| ------------------- | -------------------------------- |
+| AER LINGUS (UK) LTD | Airbus A320                      |
+| BRITISH AIRWAYS PLC | Airbus A320                      |
+| EASYJET UK LTD      | Airbus A320                      |
+| JET2.COM LTD        | Boeing 737-800                   |
+| RYANAIR UK LTD      | Boeing 737-800                   |
+| WIZZ AIR UK LTD     | Airbus A320                      |
+| TUI AIRWAYS LTD     | Boeing 737-800                   |  
 
-```{r, fig.height=6, fig.width=9, fig.cap=""}
+* This will allow us to get a more accurate picture of plane capacity, and to get closer to understanding how many of these flights might be empty or ultra-low capacity   
+
+```{r, fig.height=3.5, fig.width=5, fig.cap=""}
 
 # https://aircraft.airbus.com/en/aircraft/a320/a320ceo#:~:text=With%20a%20versatile%20cabin%20that,relax%20and%20enjoy%20the%20flight.
 airbus.a320.max.capacity = 180 
@@ -230,12 +253,12 @@ Boeing.737800.max.capacity = 189
 p2 = dec21.allservices %>% 
   dplyr::mutate(avg_passengers_per_flight=total_passengers_uplifted/no_flights) %>% 
   dplyr::select(airline_name, avg_passengers_per_flight) %>% 
-  dplyr::filters(airline_name %in% c("AER LINGUS (UK) LTD", "BRITISH AIRWAYS PLC", "EASYJET UK LTD", "JET2.COM LTD", "RYANAIR UK LTD", "TUI AIRWAYS LTD", "WIZZ AIR UK LTD")) %>% 
+  dplyr::filter(airline_name %in% c("AER LINGUS (UK) LTD", "BRITISH AIRWAYS PLC", "EASYJET UK LTD", "JET2.COM LTD", "RYANAIR UK LTD", "TUI AIRWAYS LTD", "WIZZ AIR UK LTD")) %>% 
   
   ggplot(data=., aes(x=reorder(airline_name, avg_passengers_per_flight), y=avg_passengers_per_flight)) + 
   theme_bw(base_size=12) +
   geom_col(fill=ba.cols[1]) +
-  theme(axis.text.x = element_text(angle=45, size=5, hjust=1),
+  theme(axis.text.x = element_text(angle=45, size=8, hjust=1),
         plot.title = element_text(hjust = 0.5)
   ) + 
   scale_x_discrete(labels = function(x) stringr::str_wrap(x, width = 40)) + 
@@ -246,22 +269,25 @@ p2 = dec21.allservices %>%
   geom_text(aes(x=0, y=airbus.a320.max.capacity, label = "Airbus A320 max. capacity", vjust = 1.5, hjust=-0.1), fontface="plain", size=3, check_overlap=T) +
   geom_hline(yintercept=Boeing.737800.max.capacity, alpha=0.5) +
   geom_text(aes(x=0, y=Boeing.737800.max.capacity, label = "Boeing 737-800 max. capacity", vjust = 1.5, hjust=-0.09), fontface="plain", size=3, check_overlap=T) +
-  # geom_hline(yintercept=airbus.a319.max.capacity, alpha=0.5) + 
-  # geom_text(aes(x=0, y=airbus.a319.max.capacity, label = "Airbus A316 max. capacity", vjust = 1.5, hjust=-0.1), fontface="plain", size=3, check_overlap=T) +
   scale_y_continuous(breaks = seq(0, 200, by=10)) 
 
 p2
 
 ```
-
-* Here it is likely that the airlines with the very lowest passengers per flight operate charter or private services, and as such do not carry these 
+* So for the airlines that have A320s and 737-800s as their main fleet members, it is clear to see that the average number of passengers on a flight falls well below the maximum capacity of these models  
+* Clearly it is impossible to tell from this data alone how many flights exactly are running empty, or at extremely low capacity  
+* But this does suggest that this may be one of a few potential scenarios at play here  
+* Perhaps all flights are flying at slightly below capacity  
+* Perhaps some flights are full and a proportion of flights are flying drastically below capacity  
+* Or perhaps most are full, and a proportion of flights are empty or near-empty AKA, ghost flights  
+* In any case, this under-use of capacity is extraordinarily wasteful  
+* And what we can tell from this data is that, on average, across the 28 UK airlines that we have data for, 52% of the available passenger capacity was unused in December 2021  
 
 # Conclusions  
 
 * The main issue with this data, is that there is no per-flight breakdown, this is an average over all of the flights in the period  
-* We cannot discern from this data the distribution of un-used seats - i.e. how many planes fly empty vs. how many fly 50% empty etc.  
-* Some (hardly any) might be passengers <2, but the majority will be on laps anyway  
-
+* We cannot discern from this data the distribution of un-used seats across flights    
+* This is largely driven by the airport slot rule: https://www.airport-technology.com/news/uk-extends-slot-rules/#:~:text=Under%20the%20new%20rule%2C%20airlines,return%20to%20pre%2Dpandemic%20levels.
 
 
 
