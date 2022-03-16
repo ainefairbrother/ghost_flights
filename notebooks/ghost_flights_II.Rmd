@@ -440,147 +440,18 @@ ggsave(
 
 # Other findings
 
+## Highlighting flights running with < 10 passengers per flights  
+
 ```{r}
 
-
 caa.dat %>% 
-  dplyr::select()
+  dplyr::filter( (seat_km_used_as_percent_of_avail<=15)) %>% 
+  dplyr::group_by(reporting_year, airline_name) %>% 
+  dplyr::summarise(sum_flights_less_10_avg_passengers = sum(no_flights)) %>% 
+  dplyr::arrange(-sum_flights_less_10_avg_passengers)
+
 
 ```
-
-
-
-
-
-<!-- seat_km_available*seat_km_used_as_percent_of_available / aircraft_km -->
-
-<!-- ```{r} -->
-
-<!-- data.to.plot %>% -->
-
-<!--   dplyr::filter( !(reporting_year %in% c("2020","2021")) ) %>%  -->
-
-
-<!--   ggplot(data=., aes(x=reorder(airline_name, actual_empty_seats), y=actual_empty_seats)) + -->
-<!--   theme_bw() + -->
-<!--   geom_col() + -->
-<!--   theme(axis.text.x = element_text(angle=45, size=5, hjust=1), -->
-<!--         plot.title = element_text(hjust = 0.5) -->
-<!--   ) + -->
-<!--   scale_x_discrete(labels = function(x) stringr::str_wrap(x, width = 40)) + -->
-<!--   ylab("actual_empty_seats") + -->
-<!--   xlab("Airline") + -->
-<!--   labs(title="", fill="") + -->
-<!--   facet_grid(~reporting_month_year) -->
-
-
-
-<!-- ``` -->
-
-<!-- ```{r, fig.width=5, fig.height=2} -->
-
-<!-- data.to.plot %>%  -->
-<!--   ggplot(data=., aes(x=reporting_period, y=total_passengers_uplifted, colour=airline_name)) + -->
-<!--   theme_bw() + -->
-<!--   geom_line(alpha=0.5) + -->
-<!--   geom_point(aes(size=no_flights), alpha=0.7) + -->
-<!--   scale_x_date(breaks=scales::date_breaks("1 month")) + -->
-<!--   theme(legend.position = "top",  -->
-<!--         legend.key.size = unit(0.5, "lines"), -->
-<!--         legend.text = element_text(size=6), -->
-<!--         axis.text.x = element_text(angle=55, hjust=1)) + -->
-<!--   labs(colour="") + -->
-<!--   scale_colour_manual(values = mycolors) + -->
-<!--   geom_vline(xintercept=apr.20, linetype=2, alpha=0.5) + -->
-<!--   geom_vline(xintercept=nov.21, linetype=2, alpha=0.5) -->
-
-<!-- ``` -->
-
-<!-- ```{r, fig.width=5, fig.height=2} -->
-
-<!-- data.to.plot %>%  -->
-<!--   ggplot(data=., aes(x=reporting_period, y=no_flights, colour=airline_name)) + -->
-<!--   theme_bw() + -->
-<!--   geom_line(alpha=0.4) + -->
-<!--   geom_point() + -->
-<!--   scale_x_date(breaks=scales::date_breaks("1 month")) + -->
-<!--   theme(legend.position = "top",  -->
-<!--         legend.key.size = unit(0.5, "lines"), -->
-<!--         legend.text = element_text(size=6), -->
-<!--         axis.text.x = element_text(angle=55, hjust=1)) + -->
-<!--   labs(colour="") + -->
-<!--   scale_colour_manual(values = mycolors) + -->
-<!--   geom_vline(xintercept=apr.20, linetype=2, alpha=0.5) + -->
-<!--   geom_vline(xintercept=nov.21, linetype=2, alpha=0.5) -->
-
-<!-- ``` -->
-
-<!-- ```{r, fig.width=5, fig.height=2} -->
-
-<!-- data.to.plot %>%  -->
-<!--   ggplot(data=., aes(x=reporting_period, y=avg_passengers_per_flight, colour=airline_name)) + -->
-<!--   theme_bw() + -->
-<!--   geom_line(alpha=0.4) + -->
-<!--   geom_point() + -->
-<!--   scale_x_date(breaks=scales::date_breaks("1 month")) + -->
-<!--   theme(legend.position = "top",  -->
-<!--         legend.key.size = unit(0.5, "lines"), -->
-<!--         legend.text = element_text(size=6), -->
-<!--         axis.text.x = element_text(angle=55, hjust=1)) + -->
-<!--   labs(colour="") + -->
-<!--   scale_colour_manual(values = mycolors) + -->
-<!--   geom_vline(xintercept=apr.20, linetype=2, alpha=0.5) + -->
-<!--   geom_vline(xintercept=nov.21, linetype=2, alpha=0.5) -->
-
-<!-- ``` -->
-
-<!-- ```{r, fig.width=5, fig.height=2} -->
-
-<!-- data.to.plot %>%  -->
-<!--   ggplot(data=., aes(x=reporting_period, y=aircraft_km, colour=airline_name)) + -->
-<!--   theme_bw() + -->
-<!--   geom_line(alpha=0.4) + -->
-<!--   geom_point() + -->
-<!--   scale_x_date(breaks=scales::date_breaks("1 month")) + -->
-<!--   theme(legend.position = "top",  -->
-<!--         legend.key.size = unit(0.5, "lines"), -->
-<!--         legend.text = element_text(size=6), -->
-<!--         axis.text.x = element_text(angle=55, hjust=1)) + -->
-<!--   labs(colour="") +  -->
-<!--   scale_colour_manual(values = mycolors) + -->
-<!--   geom_vline(xintercept=apr.20, linetype=2, alpha=0.5) + -->
-<!--   geom_vline(xintercept=nov.21, linetype=2, alpha=0.5) -->
-
-<!-- ``` -->
-
-<!-- ```{r, fig.width=5, fig.height=2} -->
-
-<!-- data.to.plot %>%  -->
-<!--   ggplot(data=., aes(x=reporting_period, y=seat_km_used_as_percent_of_avail, group=reporting_period)) + -->
-<!--   theme_bw() + -->
-<!--   geom_boxplot() + -->
-<!--   scale_x_date(breaks=scales::date_breaks("1 month")) + -->
-<!--   theme(legend.position = "top",  -->
-<!--         legend.key.size = unit(0.5, "lines"), -->
-<!--         legend.text = element_text(size=6), -->
-<!--         axis.text.x = element_text(angle=55, hjust=1)) + -->
-<!--   labs(colour="") + -->
-<!--   scale_colour_manual(values = mycolors) + -->
-<!--   geom_vline(xintercept=apr.20, linetype=2, alpha=0.5) + -->
-<!--   geom_vline(xintercept=nov.21, linetype=2, alpha=0.5) + -->
-<!--   ylim(0,100) -->
-
-<!-- ``` -->
-
-
-
-
-
-
-
-
-
-
 
 
 
