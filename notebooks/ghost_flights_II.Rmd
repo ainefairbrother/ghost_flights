@@ -14,40 +14,8 @@ output:
     fig_caption: true
 ---
 
-Title(s):
-Understanding airline efficiency using publicly available data
+TODO
 
-What is your novel idea? - public data to hold aviation industry to account
-Why should we care? - climate change
-How are you going to prove your point? - data analysis of CAA public data
-
-Introduction:
-I was listening to The Guardian’s Today In Focus podcast recently, and was captivated by the episode ‘The Scandal of Britain’s Ghost Flights’ [1]. Ghost flights are empty or near-empty flights (0-10% capacity) undertaken by airlines simply to reach the flight quota required to retain their airport ‘slots’. Damian Carrington uncovers that despite the ‘slot’ rules being lifted due to the pandemic causing passenger numbers to crash, airlines continued to run ‘ghost flights’. 
-
-Aviation is an extremely polluting industry, generating 250kg CO2 per hour of flying [2]. To put that into perspective, even a short-haul flight can generate more CO2 than people from some countries produce in a year. For example, someone from Sub-Saharan Africa releases ~100kg CO2 per year [3]. 
-
-We need to drastically and immediately make changes in order to keep global heating below 1.5C (2.7F). There is a lot that will be challenging to change, requiring major shifts in economic and political systems. But the issue of low efficiency in the aviation industry, ghost flights in particular, seems like an easy one to fix, the low hanging fruit of CO2 emission reduction if you like. 
-
-Some approximate numbers of ghost flights have been gleaned from hard-won datasets (as discussed in the Guardian podcast [1]) but obtaining these data is difficult. Carrington was forced to recruit help from an MP in order to obtain the per-flight data that he needed to understand ghost flight numbers.
-
-In the podcast, the core findings that Carrington outlines are as follows: 
-- “According to newly revealed official figures, almost 15,000 ghost flights have departed from UK airports in March 2020 and September 2021.”
-- “some of these flights are a result of the long-established system forcing airlines to maintain flights in their airport ‘slots’ or risk losing their position to rivals” 
-- “But this doesn’t explain those flights in the pandemic period when the slot system was paused.”
-And so the question remains… why did airlines continue to fly heavily polluting empty flights?
-- He was limited by access to outgoing UK flight data
-
-Inspired by this work, I want to ask whether it is possible to glean some useful insights about airline efficiency from publicly available airline data, without having to go through FOIs and leveraging high-profile contacts. The idea is that if they are, this represents an accessible way to make these issues known, and hold airlines, airports and regulators accountable to these practices. This data is released monthly by the CAA, and so capacity figures are trackable over time and can be monitored in response to regulation changes. 
-
-Questions: 
-- Are the trends observed by Carrington observable in the publicly available UK Civil Aviation Authority (CAA) data?
-- Is there anything else that can be observed?
-    - Particularly bad airlines?
-
-References
-1. https://www.theguardian.com/news/audio/2022/mar/07/the-scandal-of-britains-ghost-flights-podcast?CMP=Share_iOSApp_Other
-2.  https://www.carbonindependent.org/sources_aviation.html#:~:text=A%20reasonable%20estimate%20for%20aviation,obtained%20by%20basis%201%20above
-3. https://ourworldindata.org/annual-co2-emissions
 
 
 ```{r setup, include=FALSE}
@@ -114,7 +82,7 @@ wget -c https://www.caa.co.uk/Documents/Download/9085/957ac730-2947-4be0-b029-31
 
 * Read in downloaded data  
 
-```{r message=FALSE, warning=FALSE}
+```{r message=FALSE, warning=FALSE, include=FALSE}
 
 setwd("/Users/ainefairbrother/Documents/PhD/r_projects/ghost_flights/data/")
 caa.dat = plyr::ldply(list.files(path="/Users/ainefairbrother/Documents/PhD/r_projects/ghost_flights/data/", pattern="*.csv"), read_csv)
@@ -138,7 +106,6 @@ caa.dat = caa.dat %>%
 # Filter data  
 
 * We will filter for only passenger services, as this is the focus of the project  
-* Also filter out airlines that carried 0 passengers - we will come back to these
 
 ```{r}
 
@@ -185,15 +152,6 @@ caa.dat = caa.dat %>%
 
 # Are the trends observed by Carrington observable in the publicly available UK Civil Aviation Authority (CAA) data?  
 
-```{r}
-
-caa.dat %>% 
-  dplyr::pull(airline_name) %>% 
-  unique() %>% 
-  length() # 32 airlines 
-
-```
-
 * Define slot rule variables to add lines on plots  
 
 * When were the slot rules in place? use it or loose it - https://www.routesonline.com/news/29/breaking-news/297416/uk-increases-minimum-slot-usage-threshold-for-summer-2022/  
@@ -209,8 +167,6 @@ caa.dat %>%
 * April 2021 - Oct 2021 = 0%  
 * Nov 2021 - March 2022 = 50%  
 
-* Filter data for plotting  
-
 * Define slot rule time boundaries  
 
 ```{r}
@@ -221,9 +177,37 @@ nov.21 = caa.dat %>% dplyr::pull(reporting_period) %>% unique() %>% .[.=="2021-1
 
 ```
 
+* Define lockdown time boundaries  
+* Data from https://www.instituteforgovernment.org.uk/charts/uk-government-coronavirus-lockdowns  
+
+```{r}
+
+# first lockdown 23/03 - August (2020)
+lockdown.2020.1.start = caa.dat %>% dplyr::pull(reporting_period) %>% unique() %>% .[.=="2020-04-01"] %>% as.numeric(.)
+lockdown.2020.1.end = caa.dat %>% dplyr::pull(reporting_period) %>% unique() %>% .[.=="2020-08-01"] %>% as.numeric(.)
+
+# 2nd lockdown: 05/11/2020 - 02/12/2020  
+lockdown.2020.2.start = caa.dat %>% dplyr::pull(reporting_period) %>% unique() %>% .[.=="2020-11-01"] %>% as.numeric(.)
+lockdown.2020.2.end = caa.dat %>% dplyr::pull(reporting_period) %>% unique() %>% .[.=="2020-12-01"] %>% as.numeric(.)
+
+# 3rd lockdown: 06/01/21 - may (2021)
+lockdown.2021.3.start = caa.dat %>% dplyr::pull(reporting_period) %>% unique() %>% .[.=="2021-01-01"] %>% as.numeric(.)
+lockdown.2021.3.end = caa.dat %>% dplyr::pull(reporting_period) %>% unique() %>% .[.=="2021-05-01"] %>% as.numeric(.)
+
+```
+
 * Define data to plot  
 * Focusing on the largest 5 airlines by passenger capacity
-* Calculate airlines 
+* Calculate airlines  
+
+```{r}
+
+caa.dat %>% 
+  dplyr::pull(airline_name) %>% 
+  unique() %>% 
+  length() # 32 airlines 
+
+```
 
 ```{r}
 
@@ -258,187 +242,335 @@ mycolors = colorRampPalette(brewer.pal(nb.cols, "Set1"))(nb.cols)
 
 ```
 
+* Plot capacity time-course with 0% slot rule highlighted  
 
 ```{r, fig.width=5, fig.height=2}
 
-data.to.plot %>% 
+p1 = data.to.plot %>% 
   ggplot(data=., aes(x=reporting_period, y=seat_km_available, colour=airline_name)) +
-  theme_bw() +
-  geom_line(alpha=0.6) +
+  theme_bw(base_size=10) +
+  geom_line(alpha=0.5) +
   geom_point(aes(size=seat_km_used_as_percent_of_avail, alpha=seat_km_used_as_percent_of_avail)) +
-  # geom_vline(xintercept=apr.20, linetype=2, alpha=0.5) +
-  # geom_vline(xintercept=nov.21, linetype=2, alpha=0.5) + 
-  theme(legend.position =  "right", # legend.position=c(0.1, 0.7),
+  geom_vline(xintercept=apr.20, linetype=3, alpha=0.4) +
+  geom_vline(xintercept=nov.21, linetype=3, alpha=0.4) +
+  theme(legend.position =  "right",
         legend.background = element_blank(),
         legend.box.background = element_blank(),
-        # legend.key.size = unit(0.1, "lines"),
         legend.text = element_text(size=8),
         legend.title = element_text(size=8),
         legend.direction = "vertical", 
         legend.box = "vertical",
-        # legend.spacing.y = unit(0.1, 'cm'),
-        # legend.box.spacing = unit(0.1, "cm"),
-        # legend.margin = margin(0.1, 0.1),
+        plot.title = element_text(hjus=0.5),
         axis.text.x = element_text(angle=55, hjust=1)) +
-  labs(colour="Airline", size="Seat km used as % of available", alpha="") +
+  labs(colour="Airline", 
+       size="Seat km used as % of available", 
+       alpha="",
+       title="") +
   guides(colour = guide_legend(order = 1), size=guide_legend(order = 3)) +
   scale_colour_manual(values = mycolors) +
   scale_alpha(guide="none") +
   scale_x_date(breaks=scales::date_breaks("1 month")) +
-  
-  # ylim(0,100) + 
   ylab("\nSeat km available\n") +
-  xlab("\nReporting period") +
-  
+  xlab("\nReporting period start date") +
   # shade 0% capacity rule area
   annotate("rect", xmin = as.Date("2020-04-01"), xmax = as.Date("2021-11-01"), ymin = -Inf, ymax = Inf, alpha = 0.15) 
 
+p1
+
 ```
+
+* Plot capacity time-course with lockdowns highlighted  
+
+```{r, fig.width=5, fig.height=2}
+
+p2 = data.to.plot %>% 
+  ggplot(data=., aes(x=reporting_period, y=seat_km_available, colour=airline_name)) +
+  theme_bw(base_size=10) +
+  # shade lockdown spans
+  annotate("rect", xmin = as.Date("2020-04-01"), xmax = as.Date("2020-08-01"), ymin = -Inf, ymax = Inf, alpha = 0.15) +
+  annotate("rect", xmin = as.Date("2021-01-01"), xmax = as.Date("2021-05-01"), ymin = -Inf, ymax = Inf, alpha = 0.15) +
+  # add UK lockdown markers
+  geom_vline(xintercept = lockdown.2020.1.start, linetype=3, alpha=0.4) +
+  geom_vline(xintercept = lockdown.2020.1.end,   linetype=3, alpha=0.4) +
+  geom_vline(xintercept = lockdown.2021.3.start, linetype=3, alpha=0.4) +
+  geom_vline(xintercept = lockdown.2021.3.end,   linetype=3, alpha=0.4) +
+  # add points and lines
+  geom_line(alpha=0.5) +
+  geom_point(aes(size=seat_km_used_as_percent_of_avail, alpha=seat_km_used_as_percent_of_avail)) +
+  # set theme
+  theme(legend.position =  "right",
+        legend.background = element_blank(),
+        legend.box.background = element_blank(),
+        legend.text = element_text(size=8),
+        legend.title = element_text(size=8),
+        legend.direction = "vertical", 
+        legend.box = "vertical",
+        plot.title = element_text(hjus=0.5),
+        axis.text.x = element_text(angle=55, hjust=1)) +
+  labs(colour="Airline", 
+       size="Seat km used as % of available", 
+       alpha="",
+       title="") +
+  guides(colour = guide_legend(order = 1), size=guide_legend(order = 3)) +
+  scale_colour_manual(values = mycolors) +
+  scale_alpha(guide="none") +
+  scale_x_date(breaks=scales::date_breaks("1 month")) +
+  ylab("\nSeat km available\n") +
+  xlab("\nReporting period start date")
+
+p2
+
+```
+
+* Focus on between-lockdown space, plot used capacity vs. available capacity between Aug 2020 and Dec 2020   
+* The 0% rule is in place, and people are emerging from lockdown 1  
+* It is clear 
+
+```{r, fig.width=5, fig.height=2}
+
+p3 = data.to.plot %>% 
+  dplyr::filter(reporting_month_year %in% c("Aug-2020", "Sep-2020", "Oct-2020", "Dec-2020")) %>% 
+  ggplot(data=., aes(x=seat_km_used, y=seat_km_available, colour=airline_name)) +
+  theme_bw(base_size=9) +
+  geom_point() +
+  xlim(0,6e+09) +
+  ylim(0,6e+09) +
+  geom_abline(intercept = 0) +
+  # set theme
+  theme(legend.position =  "top",
+        legend.background = element_blank(),
+        legend.box.background = element_blank(),
+        legend.text = element_text(size=8),
+        legend.title = element_text(size=8),
+        legend.direction = "horizontal",
+        legend.box = "vertical",
+        plot.title = element_text(hjus=0.5), 
+        axis.text.x = element_text(angle=0, hjust=0.5)) +
+  labs(colour="Airline") +
+  xlab("\nSeat km used\n") +
+  ylab("\nSeat km available\n") +
+  scale_colour_manual(values = mycolors) +
+  coord_fixed(ratio = 1) +
+  facet_grid(~factor(reporting_month_year, levels=c("Aug-2020", "Sep-2020", "Oct-2020", "Dec-2020")))
+
+p3
+
+```
+
+# Discussion  
+
+## Explaining the data/ measures  
 
 * Seat km available is a measure of the number of seats and the distances those seats could fly as determined by scheduled flights and aircraft capacity  
 * So if an airline has 1 Boeing 737-800 (capacity 189) and has 1 scheduled flight from London to Edinburgh (approx. 500km), then it will have an available seat km of 189*500=94500  
 * This makes seat km available a good inter-airline comparison metric, as it takes into account the variable fleets of airlines, as well as the variable haulages of different airlines  
 * Each month, the CAA releases its UK Airline dataset, which includes monthly totals for passengers uplifted, distance flown, seat kilometers available, seat kilometers used etc., for each airline  
+
+## Timecourse plot explainer  
+
 * This plot shows a timecourse spanning from November 2019 (pre-pandemic) to January 2022 (latest figures released by the CAA), with dates plotted along the x-axis corresponding to the monthly data-release schedule of the CAA  
 * The y-axis gives the % of seat kilometers used of those available to the airline  
 * The shaded area represents the duration of the UK waiver on the minimum slot rule, i.e. there was no minimum activity required by an airline during this time to retain their airport slot  
+* The points are set to be large and opaque when % seat km used is high, and small and transparent when % seat km is low  
+* So, it is clear to see when availability meets or outstrips demand  
+* The availability is shown on the y-axis, and a dark opaque point will show that a high % of this was used, conversely, a small transparent point will show that a low % of this was used  
+## [p1]  
+
 * In the pre-pandemic months of November and December of 2019, airlines were required to be active 80% of the time to retain their airport slots  
-* This is visible in the data for these airlines - seat km availability is high, showing that these airlines are scheduling many flights and % seat km used is high too, indicative of good efficiency 
-* As March rolls around, and the UK becomes aware of COVID-19, % seat km used begings to drop off  
-* By April 2020, the actual capacity of the airline plummets as the 80% rule is waived. Now that airlines can retain slots without operating at min. 80%, it is likely airlines are reduing their capacity by putting staff on furlough and scheduling far fewer flights  
-* Demand from customers plummets too, as March sees the onset of the first UK lockdown  
-* And yet what we do see is not that a few essential flights are occuring, but that % seat km used (a measure of the fullness of the flights/usage of the flights), indicated by size and opacity of the points, suggests that flights are still going ahead, but at much lower capacities.  
-* This is particularly apparent during January - July of 2021, which was a lockdown in the UK  
-* There are a number of conclusions that can be drawn from this, of course hampered by the fact that this is total/ average data rather than per-flight data  
-* The first is that, on average, during the 0% flights were being run at  
+* This is visible in the data for these airlines - seat km availability is high, showing that these airlines are scheduling many flights and % seat km used is high too, indicative that demand is meeting supply  
+* As March rolls around, and COVID-19 begins to impact the UK, capacity used begins to drop off as the first UK lockdown is announced
+* By April 2020, the available capacity of the airline plummets as the 80% rule is waived  
+* Now that airlines can retain slots without operating at min. 80%, it is likely that during this period, airlines reduced their capacity by putting staff on furlough and scheduling far fewer flights  
 
+## [p2]  
 
+* Looking now to the same timecourse, but with the 2 longer UK lockdowns indicated by shading  
+* In the first lockdown, we can see that some airlines (e.g. EasyJet) has low seat km available, and that this capacity is largely filled (~80% filled)
+* This is in contrast to British Airways, who seem to have more available capacity, but it is under-used (~20% filled). 
+* The first is that, on average, during the slot rule waiver period, flights were km was being made available, particularly between August and October of 2020, and this capacity was underused to the tune of 60-80% in some cases.  
 
+## [p3]  
 
+* The time between the two major UK lockdowns is interesting  
+* Towards the end of this time, there is a snap lockdown for 4 weeks during November, but other than this, there are fewer restrictions in place than in the blocks of time flanking it  
+* Let's zoom in on this and plot capacity available vs. capacity used for each month and each airline, to get a more granular view on this time period  
+* The 0% slot rule is still in place, and yet what we see here is that one airline in particular - British Airways - has consistently more capacity than it is using  
+* EasyJet is not far behind, in August and September 2020, it runs  
 
-
-
-
-
-seat_km_available*seat_km_used_as_percent_of_available / aircraft_km
+* Save plots  
 
 ```{r}
 
-data.to.plot %>%
-  
-  dplyr::filter( !(reporting_year %in% c("2020","2021")) ) %>% 
-  
-  
-  ggplot(data=., aes(x=reorder(airline_name, actual_empty_seats), y=actual_empty_seats)) +
-  theme_bw() +
-  geom_col() +
-  theme(axis.text.x = element_text(angle=45, size=5, hjust=1),
-        plot.title = element_text(hjust = 0.5)
-  ) +
-  scale_x_discrete(labels = function(x) stringr::str_wrap(x, width = 40)) +
-  ylab("actual_empty_seats") +
-  xlab("Airline") +
-  labs(title="", fill="") +
-  facet_grid(~reporting_month_year)
+setwd("~/Documents/PhD/r_projects/ghost_flights/img/")
 
+ggsave(
+  filename="p1.tiff",
+  plot = p1,
+  device = "tiff",
+  scale = 2,
+  width = 5,
+  height = 2,
+  units = c("in"),
+  dpi = 500
+)
 
+ggsave(
+  filename="p2.tiff",
+  plot = p2,
+  device = "tiff",
+  scale = 2,
+  width = 5,
+  height = 2,
+  units = c("in"),
+  dpi = 500
+)
 
-```
-
-```{r, fig.width=5, fig.height=2}
-
-data.to.plot %>% 
-  ggplot(data=., aes(x=reporting_period, y=total_passengers_uplifted, colour=airline_name)) +
-  theme_bw() +
-  geom_line(alpha=0.5) +
-  geom_point(aes(size=no_flights), alpha=0.7) +
-  scale_x_date(breaks=scales::date_breaks("1 month")) +
-  theme(legend.position = "top", 
-        legend.key.size = unit(0.5, "lines"),
-        legend.text = element_text(size=6),
-        axis.text.x = element_text(angle=55, hjust=1)) +
-  labs(colour="") +
-  scale_colour_manual(values = mycolors) +
-  geom_vline(xintercept=apr.20, linetype=2, alpha=0.5) +
-  geom_vline(xintercept=nov.21, linetype=2, alpha=0.5)
+ggsave(
+  filename="p3.tiff",
+  plot = p3,
+  device = "tiff",
+  scale = 2,
+  width = 5,
+  height = 2,
+  units = c("in"),
+  dpi = 500
+)
 
 ```
 
-```{r, fig.width=5, fig.height=2}
+# Other findings
 
-data.to.plot %>% 
-  ggplot(data=., aes(x=reporting_period, y=no_flights, colour=airline_name)) +
-  theme_bw() +
-  geom_line(alpha=0.4) +
-  geom_point() +
-  scale_x_date(breaks=scales::date_breaks("1 month")) +
-  theme(legend.position = "top", 
-        legend.key.size = unit(0.5, "lines"),
-        legend.text = element_text(size=6),
-        axis.text.x = element_text(angle=55, hjust=1)) +
-  labs(colour="") +
-  scale_colour_manual(values = mycolors) +
-  geom_vline(xintercept=apr.20, linetype=2, alpha=0.5) +
-  geom_vline(xintercept=nov.21, linetype=2, alpha=0.5)
+```{r}
+
+
+caa.dat %>% 
+  dplyr::select()
 
 ```
 
-```{r, fig.width=5, fig.height=2}
 
-data.to.plot %>% 
-  ggplot(data=., aes(x=reporting_period, y=avg_passengers_per_flight, colour=airline_name)) +
-  theme_bw() +
-  geom_line(alpha=0.4) +
-  geom_point() +
-  scale_x_date(breaks=scales::date_breaks("1 month")) +
-  theme(legend.position = "top", 
-        legend.key.size = unit(0.5, "lines"),
-        legend.text = element_text(size=6),
-        axis.text.x = element_text(angle=55, hjust=1)) +
-  labs(colour="") +
-  scale_colour_manual(values = mycolors) +
-  geom_vline(xintercept=apr.20, linetype=2, alpha=0.5) +
-  geom_vline(xintercept=nov.21, linetype=2, alpha=0.5)
 
-```
 
-```{r, fig.width=5, fig.height=2}
 
-data.to.plot %>% 
-  ggplot(data=., aes(x=reporting_period, y=aircraft_km, colour=airline_name)) +
-  theme_bw() +
-  geom_line(alpha=0.4) +
-  geom_point() +
-  scale_x_date(breaks=scales::date_breaks("1 month")) +
-  theme(legend.position = "top", 
-        legend.key.size = unit(0.5, "lines"),
-        legend.text = element_text(size=6),
-        axis.text.x = element_text(angle=55, hjust=1)) +
-  labs(colour="") + 
-  scale_colour_manual(values = mycolors) +
-  geom_vline(xintercept=apr.20, linetype=2, alpha=0.5) +
-  geom_vline(xintercept=nov.21, linetype=2, alpha=0.5)
+<!-- seat_km_available*seat_km_used_as_percent_of_available / aircraft_km -->
 
-```
+<!-- ```{r} -->
 
-```{r, fig.width=5, fig.height=2}
+<!-- data.to.plot %>% -->
 
-data.to.plot %>% 
-  ggplot(data=., aes(x=reporting_period, y=seat_km_used_as_percent_of_avail, group=reporting_period)) +
-  theme_bw() +
-  geom_boxplot() +
-  scale_x_date(breaks=scales::date_breaks("1 month")) +
-  theme(legend.position = "top", 
-        legend.key.size = unit(0.5, "lines"),
-        legend.text = element_text(size=6),
-        axis.text.x = element_text(angle=55, hjust=1)) +
-  labs(colour="") +
-  scale_colour_manual(values = mycolors) +
-  geom_vline(xintercept=apr.20, linetype=2, alpha=0.5) +
-  geom_vline(xintercept=nov.21, linetype=2, alpha=0.5) +
-  ylim(0,100)
+<!--   dplyr::filter( !(reporting_year %in% c("2020","2021")) ) %>%  -->
 
-```
+
+<!--   ggplot(data=., aes(x=reorder(airline_name, actual_empty_seats), y=actual_empty_seats)) + -->
+<!--   theme_bw() + -->
+<!--   geom_col() + -->
+<!--   theme(axis.text.x = element_text(angle=45, size=5, hjust=1), -->
+<!--         plot.title = element_text(hjust = 0.5) -->
+<!--   ) + -->
+<!--   scale_x_discrete(labels = function(x) stringr::str_wrap(x, width = 40)) + -->
+<!--   ylab("actual_empty_seats") + -->
+<!--   xlab("Airline") + -->
+<!--   labs(title="", fill="") + -->
+<!--   facet_grid(~reporting_month_year) -->
+
+
+
+<!-- ``` -->
+
+<!-- ```{r, fig.width=5, fig.height=2} -->
+
+<!-- data.to.plot %>%  -->
+<!--   ggplot(data=., aes(x=reporting_period, y=total_passengers_uplifted, colour=airline_name)) + -->
+<!--   theme_bw() + -->
+<!--   geom_line(alpha=0.5) + -->
+<!--   geom_point(aes(size=no_flights), alpha=0.7) + -->
+<!--   scale_x_date(breaks=scales::date_breaks("1 month")) + -->
+<!--   theme(legend.position = "top",  -->
+<!--         legend.key.size = unit(0.5, "lines"), -->
+<!--         legend.text = element_text(size=6), -->
+<!--         axis.text.x = element_text(angle=55, hjust=1)) + -->
+<!--   labs(colour="") + -->
+<!--   scale_colour_manual(values = mycolors) + -->
+<!--   geom_vline(xintercept=apr.20, linetype=2, alpha=0.5) + -->
+<!--   geom_vline(xintercept=nov.21, linetype=2, alpha=0.5) -->
+
+<!-- ``` -->
+
+<!-- ```{r, fig.width=5, fig.height=2} -->
+
+<!-- data.to.plot %>%  -->
+<!--   ggplot(data=., aes(x=reporting_period, y=no_flights, colour=airline_name)) + -->
+<!--   theme_bw() + -->
+<!--   geom_line(alpha=0.4) + -->
+<!--   geom_point() + -->
+<!--   scale_x_date(breaks=scales::date_breaks("1 month")) + -->
+<!--   theme(legend.position = "top",  -->
+<!--         legend.key.size = unit(0.5, "lines"), -->
+<!--         legend.text = element_text(size=6), -->
+<!--         axis.text.x = element_text(angle=55, hjust=1)) + -->
+<!--   labs(colour="") + -->
+<!--   scale_colour_manual(values = mycolors) + -->
+<!--   geom_vline(xintercept=apr.20, linetype=2, alpha=0.5) + -->
+<!--   geom_vline(xintercept=nov.21, linetype=2, alpha=0.5) -->
+
+<!-- ``` -->
+
+<!-- ```{r, fig.width=5, fig.height=2} -->
+
+<!-- data.to.plot %>%  -->
+<!--   ggplot(data=., aes(x=reporting_period, y=avg_passengers_per_flight, colour=airline_name)) + -->
+<!--   theme_bw() + -->
+<!--   geom_line(alpha=0.4) + -->
+<!--   geom_point() + -->
+<!--   scale_x_date(breaks=scales::date_breaks("1 month")) + -->
+<!--   theme(legend.position = "top",  -->
+<!--         legend.key.size = unit(0.5, "lines"), -->
+<!--         legend.text = element_text(size=6), -->
+<!--         axis.text.x = element_text(angle=55, hjust=1)) + -->
+<!--   labs(colour="") + -->
+<!--   scale_colour_manual(values = mycolors) + -->
+<!--   geom_vline(xintercept=apr.20, linetype=2, alpha=0.5) + -->
+<!--   geom_vline(xintercept=nov.21, linetype=2, alpha=0.5) -->
+
+<!-- ``` -->
+
+<!-- ```{r, fig.width=5, fig.height=2} -->
+
+<!-- data.to.plot %>%  -->
+<!--   ggplot(data=., aes(x=reporting_period, y=aircraft_km, colour=airline_name)) + -->
+<!--   theme_bw() + -->
+<!--   geom_line(alpha=0.4) + -->
+<!--   geom_point() + -->
+<!--   scale_x_date(breaks=scales::date_breaks("1 month")) + -->
+<!--   theme(legend.position = "top",  -->
+<!--         legend.key.size = unit(0.5, "lines"), -->
+<!--         legend.text = element_text(size=6), -->
+<!--         axis.text.x = element_text(angle=55, hjust=1)) + -->
+<!--   labs(colour="") +  -->
+<!--   scale_colour_manual(values = mycolors) + -->
+<!--   geom_vline(xintercept=apr.20, linetype=2, alpha=0.5) + -->
+<!--   geom_vline(xintercept=nov.21, linetype=2, alpha=0.5) -->
+
+<!-- ``` -->
+
+<!-- ```{r, fig.width=5, fig.height=2} -->
+
+<!-- data.to.plot %>%  -->
+<!--   ggplot(data=., aes(x=reporting_period, y=seat_km_used_as_percent_of_avail, group=reporting_period)) + -->
+<!--   theme_bw() + -->
+<!--   geom_boxplot() + -->
+<!--   scale_x_date(breaks=scales::date_breaks("1 month")) + -->
+<!--   theme(legend.position = "top",  -->
+<!--         legend.key.size = unit(0.5, "lines"), -->
+<!--         legend.text = element_text(size=6), -->
+<!--         axis.text.x = element_text(angle=55, hjust=1)) + -->
+<!--   labs(colour="") + -->
+<!--   scale_colour_manual(values = mycolors) + -->
+<!--   geom_vline(xintercept=apr.20, linetype=2, alpha=0.5) + -->
+<!--   geom_vline(xintercept=nov.21, linetype=2, alpha=0.5) + -->
+<!--   ylim(0,100) -->
+
+<!-- ``` -->
 
 
 

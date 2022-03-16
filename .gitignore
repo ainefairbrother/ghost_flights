@@ -1,5 +1,11 @@
+# image folder
+img/*
+
 # data folder
-data/*.csv
+data/*
+
+# docs folder
+docs/*
 
 # History files
 .Rhistory
