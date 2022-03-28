@@ -263,7 +263,7 @@ p0 = data.to.plot %>%
   ggplot(data=., aes(x=reporting_period, y=seat_km_available, colour=airline_name)) +
   theme_bw(base_size=11) +
   geom_line(alpha=0.5) +
-  geom_point(aes(size=seat_km_used_as_percent_of_avail, alpha=seat_km_used_as_percent_of_avail)) +
+  geom_point(aes(size=seat_km_used_as_percent_of_avail)) +
   theme(legend.position =  "top",
         legend.background = element_blank(),
         legend.box.background = element_blank(),
@@ -331,12 +331,12 @@ p0.pre.pandemic
 p1 = data.to.plot %>% 
   ggplot(data=., aes(x=reporting_period, y=seat_km_available, colour=airline_name)) +
   # shade 0% capacity rule area
-  annotate("rect", xmin = as.Date("2020-04-01"), xmax = as.Date("2021-11-01"), ymin = -Inf, ymax = Inf, alpha = 0.1) +
+  annotate("rect", xmin = as.Date("2020-04-01"), xmax = as.Date("2021-11-01"), ymin = -Inf, ymax = Inf, alpha = 0.075) +
   geom_vline(xintercept=apr.20, linetype=3, alpha=0.4) +
   geom_vline(xintercept=nov.21, linetype=3, alpha=0.4) +
   theme_bw(base_size=11) +
   geom_line(alpha=0.5) +
-  geom_point(aes(size=seat_km_used_as_percent_of_avail, alpha=seat_km_used_as_percent_of_avail)) +
+  geom_point(aes(size=seat_km_used_as_percent_of_avail)) +
   theme(legend.position =  "top",
         legend.background = element_blank(),
         legend.box.background = element_blank(),
@@ -369,9 +369,9 @@ p2 = data.to.plot %>%
   ggplot(data=., aes(x=reporting_period, y=seat_km_available, colour=airline_name)) +
   theme_bw(base_size=11) +
   # shade lockdown spans
-  annotate("rect", xmin = as.Date("2020-04-01"), xmax = as.Date("2020-08-01"), ymin = -Inf, ymax = Inf, alpha = 0.1) +
-  annotate("rect", xmin = as.Date("2020-11-01"), xmax = as.Date("2020-12-01"), ymin = -Inf, ymax = Inf, alpha = 0.1) +
-  annotate("rect", xmin = as.Date("2021-01-01"), xmax = as.Date("2021-05-01"), ymin = -Inf, ymax = Inf, alpha = 0.1) +
+  annotate("rect", xmin = as.Date("2020-04-01"), xmax = as.Date("2020-08-01"), ymin = -Inf, ymax = Inf, alpha = 0.074) +
+  annotate("rect", xmin = as.Date("2020-11-01"), xmax = as.Date("2020-12-01"), ymin = -Inf, ymax = Inf, alpha = 0.074) +
+  annotate("rect", xmin = as.Date("2021-01-01"), xmax = as.Date("2021-05-01"), ymin = -Inf, ymax = Inf, alpha = 0.074) +
   # add UK lockdown markers
   geom_vline(xintercept = lockdown.2020.1.start, linetype=3, alpha=0.4) +
   geom_vline(xintercept = lockdown.2020.1.end,   linetype=3, alpha=0.4) +
@@ -381,7 +381,7 @@ p2 = data.to.plot %>%
   geom_vline(xintercept = lockdown.2021.3.end,   linetype=3, alpha=0.4) +
   # add points and lines
   geom_line(alpha=0.5) +
-  geom_point(aes(size=seat_km_used_as_percent_of_avail, alpha=seat_km_used_as_percent_of_avail)) +
+  geom_point(aes(size=seat_km_used_as_percent_of_avail)) +
   # set theme
   theme(legend.position =  "top",
         legend.background = element_blank(),
@@ -412,13 +412,13 @@ p2
 ```{r, fig.width=8, fig.height=4}
 
 p3 = data.to.plot %>% 
-  dplyr::filter(reporting_month_year %in% c("Aug-2020", "Sep-2020", "Oct-2020", "Nov-2020")) %>% 
+  dplyr::filter(reporting_month_year %in% c("Aug-2020", "Sep-2020", "Oct-2020")) %>% 
   dplyr::distinct() %>% 
   ggplot(data=., aes(x=seat_km_used, y=seat_km_available, colour=airline_name, label=round(seat_km_used_as_percent_of_avail))) +
   theme_bw(base_size=10) +
   geom_abline(intercept = 0) +
-  xlim(0, 4.2e+09) +
-  ylim(0, 4.2e+09) +
+  xlim(0, 6e+09) +
+  ylim(0, 6e+09) +
   # set theme
   theme(legend.position =  "top",
         legend.background = element_blank(),
@@ -436,7 +436,7 @@ p3 = data.to.plot %>%
   scale_colour_manual(values = mycolors) +
   coord_fixed(ratio = 1) +
   ggrepel::geom_label_repel() +
-  facet_wrap(~factor(reporting_month_year, levels=c("Aug-2020", "Sep-2020", "Oct-2020", "Nov-2020")), nrow=2, ncol=3) 
+  facet_wrap(~factor(reporting_month_year, levels=c("Aug-2020", "Sep-2020", "Oct-2020")), nrow=2, ncol=3) 
 
 p3
 
@@ -554,6 +554,74 @@ p6.2
 
 ```
 
+```{r, fig.width=8, fig.height=4}
+
+p6.3 = data.to.plot %>% 
+  dplyr::filter(reporting_month_year %in% c("Jan-2021", "Feb-2021", "Mar-2021", "Apr-2021", "May-2021")) %>%   
+  ggplot(data=., aes(x=reporting_period, y=seat_km_available, colour=airline_name)) +
+  theme_bw(base_size=11) +
+  # add points and lines
+  geom_line(alpha=0.5) +
+  geom_point(aes(size=seat_km_used_as_percent_of_avail, alpha=seat_km_used_as_percent_of_avail)) +
+  # set theme
+  theme(legend.position =  "top",
+        legend.background = element_blank(),
+        legend.box.background = element_blank(),
+        legend.text = element_text(size=10),
+        legend.title = element_text(size=10),
+        legend.direction = "horizontal", 
+        legend.box = "vertical",
+        plot.title = element_text(hjus=0.5),
+        axis.text.x = element_text(angle=55, hjust=1)) +
+  labs(colour="Airline", 
+       size="% passenger capacity used", 
+       alpha="",
+       title="") +
+  guides(colour = guide_legend(order = 1), size=guide_legend(order = 3)) +
+  scale_colour_manual(values = mycolors) +
+  scale_alpha(guide="none") +
+  scale_x_date(breaks=scales::date_breaks("1 month")) +
+  ylab("\nPassenger capacity available\n") +
+  xlab("\nReporting period start date")
+
+p6.3
+
+```
+
+```{r, fig.width=8, fig.height=4}
+
+p6.3 = data.to.plot %>% 
+  dplyr::filter(reporting_month_year %in% c("Jan-2021", "Feb-2021", "Mar-2021", "Apr-2021", "May-2021")) %>%   
+  ggplot(data=., aes(x=reporting_period, y=total_passengers_uplifted, colour=airline_name)) +
+  theme_bw(base_size=11) +
+  # add points and lines
+  geom_line(alpha=0.5) +
+  geom_point(aes(size=seat_km_used_as_percent_of_avail, alpha=seat_km_used_as_percent_of_avail)) +
+  # set theme
+  theme(legend.position =  "top",
+        legend.background = element_blank(),
+        legend.box.background = element_blank(),
+        legend.text = element_text(size=10),
+        legend.title = element_text(size=10),
+        legend.direction = "horizontal", 
+        legend.box = "vertical",
+        plot.title = element_text(hjus=0.5),
+        axis.text.x = element_text(angle=55, hjust=1)) +
+  labs(colour="Airline", 
+       size="% passenger capacity used", 
+       alpha="",
+       title="") +
+  guides(colour = guide_legend(order = 1), size=guide_legend(order = 3)) +
+  scale_colour_manual(values = mycolors) +
+  scale_alpha(guide="none") +
+  scale_x_date(breaks=scales::date_breaks("1 month")) +
+  ylab("\nPassenger capacity available\n") +
+  xlab("\nReporting period start date")
+
+p6.3
+
+```
+
 ## Plot post-pandemic (Jul 2021 - Jan 2022)  
 
 ```{r, fig.width=8, fig.height=4}
@@ -598,7 +666,7 @@ p4.1 = data.to.plot %>%
   theme_bw(base_size=11) +
   # add points and lines
   geom_line(alpha=0.5) +
-  geom_point(aes(size=seat_km_used_as_percent_of_avail, alpha=seat_km_used_as_percent_of_avail)) +
+  geom_point(aes(size=seat_km_used_as_percent_of_avail)) +
   # set theme
   theme(legend.position =  "top",
         legend.background = element_blank(),
@@ -619,7 +687,7 @@ p4.1 = data.to.plot %>%
   scale_x_date(breaks=scales::date_breaks("1 month")) +
   ylab("\nPassenger capacity available\n") +
   xlab("\nReporting period start date") +
-  ggrepel::geom_label_repel() 
+  ggrepel::geom_label_repel(size=2.5) 
 
 p4.1
 
@@ -684,25 +752,11 @@ p7
 ```
 
 
-
-
-
-## Highlighting flights running with < 10 passengers per flights  
-
-```{r}
-
-caa.dat %>% 
-  dplyr::filter( (seat_km_used_as_percent_of_avail<=15)) %>% 
-  dplyr::group_by(reporting_year, airline_name) %>% 
-  dplyr::summarise(sum_flights_less_10_avg_passengers = sum(no_flights)) %>% 
-  dplyr::arrange(-sum_flights_less_10_avg_passengers)
-
-
-```
-
 # Save plots  
 
 ```{r}
+
+dpi = 1200
 
 setwd("~/Documents/PhD/r_projects/ghost_flights/img/")
 
@@ -714,7 +768,7 @@ ggsave(
   width = 5,
   height = 3,
   units = c("in"),
-  dpi = 500
+  dpi = dpi
 )
 ggsave(
   filename="p2.png",
@@ -724,18 +778,18 @@ ggsave(
   width = 5,
   height = 3,
   units = c("in"),
-  dpi = 500
+  dpi = dpi
 )
-# inter-lockdown space, 2 rows, 4 facets
+# inter-lockdown space, 2 rows, 3 facets
 ggsave(
   filename="p3.png",
   plot = p3,
   device = "png",
   scale = 2,
   width = 5,
-  height = 4,
+  height = 2.5,
   units = c("in"),
-  dpi = 500
+  dpi = dpi
 )
 ggsave(
   filename="p4.png",
@@ -745,7 +799,7 @@ ggsave(
   width = 5,
   height = 5,
   units = c("in"),
-  dpi = 500
+  dpi = dpi
 )
 ggsave(
   filename="p4_1.png",
@@ -755,7 +809,7 @@ ggsave(
   width = 5,
   height = 3,
   units = c("in"),
-  dpi = 500
+  dpi = dpi
 )
 ggsave(
   filename="p5.png",
@@ -765,7 +819,7 @@ ggsave(
   width = 5,
   height = 5,
   units = c("in"),
-  dpi = 500
+  dpi = dpi
 )
 ggsave(
   filename="p6.png",
@@ -775,7 +829,7 @@ ggsave(
   width = 5.5,
   height = 3,
   units = c("in"),
-  dpi = 500
+  dpi = dpi
 )
 # First lockdown plot - 2 rows, 5 facets
 ggsave(
@@ -786,7 +840,7 @@ ggsave(
   width = 5,
   height = 4,
   units = c("in"),
-  dpi = 500
+  dpi = dpi
 )
 # Third lockdown plot - 2 rows, 5 facets
 ggsave(
@@ -797,7 +851,7 @@ ggsave(
   width = 5,
   height = 4,
   units = c("in"),
-  dpi = 500
+  dpi = dpi
 )
 ggsave(
   filename="p7.png",
@@ -807,7 +861,7 @@ ggsave(
   width = 5,
   height = 2.5,
   units = c("in"),
-  dpi = 500
+  dpi = dpi
 )
 
 ```
